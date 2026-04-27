@@ -1,0 +1,105 @@
+{
+  "name": "cursor-usage-pace",
+  "displayName": "Cursor Usage Pace",
+  "description": "Status bar indicator showing whether you're ahead or behind on Cursor Auto+Composer and API quotas, given how far through the billing cycle you are.",
+  "version": "0.1.0",
+  "publisher": "ivan-kovarin",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=18"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "cursor",
+    "usage",
+    "quota",
+    "pace",
+    "status bar"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "cursorUsagePace.refresh",
+        "title": "Cursor Usage Pace: Refresh now",
+        "category": "Cursor Usage Pace"
+      },
+      {
+        "command": "cursorUsagePace.openDashboard",
+        "title": "Cursor Usage Pace: Open Cursor dashboard",
+        "category": "Cursor Usage Pace"
+      },
+      {
+        "command": "cursorUsagePace.showDiagnostics",
+        "title": "Cursor Usage Pace: Show diagnostics",
+        "category": "Cursor Usage Pace"
+      }
+    ],
+    "configuration": {
+      "title": "Cursor Usage Pace",
+      "properties": {
+        "cursorUsagePace.refreshIntervalMinutes": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 360,
+          "description": "How often to refresh usage data, in minutes."
+        },
+        "cursorUsagePace.onPaceThresholdPp": {
+          "type": "number",
+          "default": 3,
+          "minimum": 0,
+          "maximum": 50,
+          "description": "Tolerance (in percentage points) within which a track is considered 'on pace' instead of ahead/behind."
+        },
+        "cursorUsagePace.show": {
+          "type": "string",
+          "default": "auto+api",
+          "enum": [
+            "auto+api",
+            "auto",
+            "api",
+            "total"
+          ],
+          "enumDescriptions": [
+            "Show both Auto+Composer and API tracks side by side",
+            "Show only the Auto+Composer track",
+            "Show only the API track",
+            "Show only the combined Total"
+          ],
+          "description": "Which usage track(s) to render in the status bar."
+        },
+        "cursorUsagePace.stateDbPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional override path to Cursor's state.vscdb. Leave empty to auto-detect (~/Library/Application Support/Cursor/User/globalStorage/state.vscdb on macOS, %APPDATA%/Cursor/... on Windows, ~/.config/Cursor/... on Linux). Tilde expansion is supported."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke:offline": "npm run compile && node scripts/smokeOffline.js",
+    "package": "vsce package",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.11.30",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0"
+  }
+}

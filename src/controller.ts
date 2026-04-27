@@ -1,0 +1,239 @@
+import * as vscode from "vscode";
+import { buildSessionCookieValue } from "./auth/jwt";
+import { resolveStateDbPath } from "./auth/statePath";
+import {
+  TokenReadError,
+  readAccessTokenWithStrategy,
+} from "./auth/tokenReader";
+import {
+  UsageFetchResult,
+  UsageSummary,
+  fetchUsageSummary,
+} from "./api/usageClient";
+import { buildPaceModel } from "./pace/model";
+import { SummaryCache } from "./state/cache";
+import { Diagnostics, mask } from "./diagnostics";
+import { PaceStatusBar } from "./ui/statusBar";
+import {
+  TooltipCommands,
+  buildErrorTooltip,
+  buildPaceTooltip,
+  buildSignedOutTooltip,
+} from "./ui/tooltip";
+import { ResolvedConfig, readConfig } from "./config";
+
+const USER_AGENT_BASE = "cursor-usage-pace";
+
+const TOOLTIP_REFRESH_INTERVAL_MS = 30_000;
+
+export class PaceController implements vscode.Disposable {
+  private timer: NodeJS.Timeout | undefined;
+  private tooltipTimer: NodeJS.Timeout | undefined;
+  private inFlight: Promise<void> | undefined;
+  private currentConfig: ResolvedConfig;
+
+  constructor(
+    private readonly statusBar: PaceStatusBar,
+    private readonly cache: SummaryCache,
+    private readonly diagnostics: Diagnostics,
+    private readonly tooltipCommands: TooltipCommands,
+    private readonly extensionVersion: string,
+  ) {
+    this.currentConfig = readConfig();
+  }
+
+  start(): void {
+    this.statusBar.render({ kind: "loading" });
+    this.scheduleNext(0);
+    this.tooltipTimer = setInterval(
+      () => void this.refreshTooltip(),
+      TOOLTIP_REFRESH_INTERVAL_MS,
+    );
+  }
+
+  async refresh(options: { showLoading?: boolean } = {}): Promise<void> {
+    if (this.inFlight) return this.inFlight;
+    const showLoading = options.showLoading ?? false;
+    this.inFlight = this.runRefresh(showLoading);
+    try {
+      await this.inFlight;
+    } finally {
+      this.inFlight = undefined;
+    }
+  }
+
+  onConfigurationChanged(): void {
+    const next = readConfig();
+    const intervalChanged =
+      next.refreshIntervalMs !== this.currentConfig.refreshIntervalMs;
+    this.currentConfig = next;
+    if (intervalChanged) {
+      this.scheduleNext(this.currentConfig.refreshIntervalMs);
+    }
+    void this.renderFromCacheOrLoading();
+  }
+
+  dispose(): void {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = undefined;
+    }
+    if (this.tooltipTimer) {
+      clearInterval(this.tooltipTimer);
+      this.tooltipTimer = undefined;
+    }
+  }
+
+  private async runRefresh(showLoading: boolean): Promise<void> {
+    const cfg = this.currentConfig;
+    if (showLoading) {
+      this.statusBar.render({ kind: "loading", preserveLabel: true });
+    }
+    this.diagnostics.log(
+      `Refreshing (interval=${cfg.refreshIntervalMs / 60000}m, show=${cfg.show})`,
+    );
+
+    let token: string;
+    try {
+      const dbPath = resolveStateDbPath(cfg.stateDbPath);
+      this.diagnostics.log(`Reading token from ${dbPath}`);
+      const result = readAccessTokenWithStrategy(dbPath, {
+        log: (msg) => this.diagnostics.log(`  ${msg}`),
+      });
+      this.diagnostics.log(`Token read via ${result.strategy}`);
+      token = result.token;
+    } catch (err) {
+      if (err instanceof TokenReadError) {
+        this.diagnostics.recordError(
+          `Token read failed: ${err.kind} — ${err.message}`,
+          (err as Error & { cause?: unknown }).cause,
+        );
+        if (err.kind === "dbMissing" || err.kind === "tokenMissing" || err.kind === "tokenEmpty") {
+          this.renderSignedOut();
+        } else {
+          this.renderError(err.message);
+        }
+      } else {
+        const message = (err as Error).message ?? String(err);
+        this.diagnostics.recordError(`Unexpected token read error: ${message}`, err);
+        this.renderError(message);
+      }
+      this.scheduleNext(cfg.refreshIntervalMs);
+      return;
+    }
+
+    let cookieValue: string;
+    try {
+      cookieValue = buildSessionCookieValue(token);
+    } catch (err) {
+      const message = (err as Error).message ?? String(err);
+      this.diagnostics.recordError(
+        `Could not parse access token (${mask(token)}): ${message}`,
+      );
+      this.renderSignedOut();
+      this.scheduleNext(cfg.refreshIntervalMs);
+      return;
+    }
+    this.diagnostics.log(`Built session cookie ${mask(cookieValue)}`);
+
+    const result = await fetchUsageSummary({
+      cookieValue,
+      userAgent: `${USER_AGENT_BASE}/${this.extensionVersion}`,
+    });
+    this.handleResult(result);
+    this.scheduleNext(cfg.refreshIntervalMs);
+  }
+
+  private handleResult(result: UsageFetchResult): void {
+    const now = Date.now();
+    if (result.ok) {
+      void this.cache.write(result.summary, now);
+      this.diagnostics.recordResponseSummary(
+        `auto=${result.summary.plan.autoPercentUsed.toFixed(1)}% ` +
+          `api=${result.summary.plan.apiPercentUsed.toFixed(1)}% ` +
+          `cycle=${new Date(result.summary.billingCycle.startMs).toISOString().slice(0, 10)}` +
+          `→${new Date(result.summary.billingCycle.endMs).toISOString().slice(0, 10)}`,
+      );
+      this.renderModel(result.summary, now, now);
+      return;
+    }
+
+    this.diagnostics.recordError(
+      `Fetch failed: ${result.reason}${result.status ? ` (${result.status})` : ""} — ${result.message}`,
+    );
+
+    if (result.reason === "unauthorized") {
+      void this.cache.clear();
+      this.renderSignedOut();
+      return;
+    }
+
+    const cached = this.cache.read();
+    if (cached) {
+      this.renderModel(cached.summary, cached.fetchedAtMs, now);
+      return;
+    }
+    this.renderError(`${result.reason}: ${result.message}`);
+  }
+
+  private renderModel(
+    summary: UsageSummary,
+    fetchedAtMs: number,
+    nowMs: number,
+  ): void {
+    const cfg = this.currentConfig;
+    const staleAfterMs = Math.max(cfg.refreshIntervalMs * 2, 60_000);
+    const model = buildPaceModel({
+      summary,
+      fetchedAtMs,
+      nowMs,
+      show: cfg.show,
+      onPaceThresholdPp: cfg.onPaceThresholdPp,
+      staleAfterMs,
+    });
+    const tooltip = buildPaceTooltip(model, this.tooltipCommands, nowMs);
+    this.statusBar.render({ kind: "data", model, tooltip });
+  }
+
+  private renderSignedOut(): void {
+    this.statusBar.render({
+      kind: "signedOut",
+      tooltip: buildSignedOutTooltip(this.tooltipCommands),
+    });
+  }
+
+  private renderError(message: string): void {
+    this.statusBar.render({
+      kind: "error",
+      message,
+      tooltip: buildErrorTooltip(message, this.tooltipCommands),
+    });
+  }
+
+  private refreshTooltip(): void {
+    const cached = this.cache.read();
+    if (cached) {
+      this.renderModel(cached.summary, cached.fetchedAtMs, Date.now());
+    }
+  }
+
+  private async renderFromCacheOrLoading(): Promise<void> {
+    const cached = this.cache.read();
+    if (cached) {
+      this.renderModel(cached.summary, cached.fetchedAtMs, Date.now());
+    } else {
+      this.statusBar.render({ kind: "loading" });
+    }
+  }
+
+  private scheduleNext(delayMs: number): void {
+    if (this.timer) {
+      clearTimeout(this.timer);
+    }
+    if (delayMs <= 0) {
+      this.timer = setTimeout(() => void this.refresh(), 0);
+      return;
+    }
+    this.timer = setTimeout(() => void this.refresh(), delayMs);
+  }
+}
