@@ -26,11 +26,14 @@ const USER_AGENT_BASE = "cursor-usage-pace";
 
 const TOOLTIP_REFRESH_INTERVAL_MS = 30_000;
 
+type DisplayType = "loading" | "data" | "signedOut" | "error";
+
 export class PaceController implements vscode.Disposable {
   private timer: NodeJS.Timeout | undefined;
   private tooltipTimer: NodeJS.Timeout | undefined;
   private inFlight: Promise<void> | undefined;
   private currentConfig: ResolvedConfig;
+  private currentState: DisplayType = "loading";
 
   constructor(
     private readonly statusBar: PaceStatusBar,
@@ -44,6 +47,7 @@ export class PaceController implements vscode.Disposable {
 
   start(): void {
     this.statusBar.render({ kind: "loading" });
+    this.currentState = "loading";
     this.scheduleNext(0);
     this.tooltipTimer = setInterval(
       () => void this.refreshTooltip(),
@@ -88,6 +92,7 @@ export class PaceController implements vscode.Disposable {
     const cfg = this.currentConfig;
     if (showLoading) {
       this.statusBar.render({ kind: "loading", preserveLabel: true });
+      this.currentState = "loading";
     }
     this.diagnostics.log(
       `Refreshing (interval=${cfg.refreshIntervalMs / 60000}m, show=${cfg.show})`,
@@ -109,6 +114,7 @@ export class PaceController implements vscode.Disposable {
           (err as Error & { cause?: unknown }).cause,
         );
         if (err.kind === "dbMissing" || err.kind === "tokenMissing" || err.kind === "tokenEmpty") {
+          void this.cache.clear();
           this.renderSignedOut();
         } else {
           this.renderError(err.message);
@@ -197,6 +203,7 @@ export class PaceController implements vscode.Disposable {
     });
     const tooltip = buildPaceTooltip(model, this.tooltipCommands, nowMs);
     this.statusBar.render({ kind: "data", model, tooltip });
+    this.currentState = "data";
   }
 
   private renderSignedOut(): void {
@@ -204,6 +211,7 @@ export class PaceController implements vscode.Disposable {
       kind: "signedOut",
       tooltip: buildSignedOutTooltip(this.tooltipCommands),
     });
+    this.currentState = "signedOut";
   }
 
   private renderError(message: string): void {
@@ -212,9 +220,11 @@ export class PaceController implements vscode.Disposable {
       message,
       tooltip: buildErrorTooltip(message, this.tooltipCommands),
     });
+    this.currentState = "error";
   }
 
   private refreshTooltip(): void {
+    if (this.currentState !== "data") return;
     const cached = this.cache.read();
     if (cached) {
       this.renderModel(cached.summary, cached.fetchedAtMs, Date.now());
@@ -222,11 +232,15 @@ export class PaceController implements vscode.Disposable {
   }
 
   private async renderFromCacheOrLoading(): Promise<void> {
+    if (this.currentState === "signedOut" || this.currentState === "error") {
+      return;
+    }
     const cached = this.cache.read();
     if (cached) {
       this.renderModel(cached.summary, cached.fetchedAtMs, Date.now());
     } else {
       this.statusBar.render({ kind: "loading" });
+      this.currentState = "loading";
     }
   }
 
