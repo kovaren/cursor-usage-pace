@@ -9,9 +9,9 @@ Cursor's own dashboard shows you *what* you have used (e.g. "Auto + Composer 12%
 Each configured track is shown inline with a directional arrow and the absolute delta:
 
 ```
-Auto↑18% • API↑12%        ← both burning faster than pace
-Auto↓2%  • API↓1%         ← both comfortably under pace
-Auto↓27% • API↓39%        ← heavily under-using
+Auto ↑18% • API ↑12%        ← both burning faster than pace
+Auto ↓2%  • API ↓1%         ← both comfortably under pace
+Auto ↓27% • API ↓39%        ← heavily under-using
 ```
 
 ## Detailed view
@@ -21,47 +21,25 @@ Hover the status bar item for a full breakdown:
 ```
 Cursor Usage Pace
 
-Cycle: Apr 4 → May 4 · 8 days left · 77% elapsed
+Cycle: Apr 4 → May 4 · 77% elapsed · 8 days left
 
 | Track            | Used | Pace              |
 | Auto + Composer  | 12%  | underused by 65%  |
 | API              | 38%  | underused by 39%  |
 
-Last refreshed 2 min ago · Refresh · Open Cursor dashboard · Diagnostics
+Last refreshed 2 min ago · Refresh · Dashboard · Diagnostics
 ```
 
 Pace values are colored: **green** = under pace (capacity to spare), **orange** = over pace (burning faster than expected).
 
 Clicking the bar or "Refresh" in the tooltip triggers a manual refresh.
 
-## How it works
-
-ℹ️ This extension does not ask you for your password or session cookie
-
-Cursor stores its own session token on disk at:
-
-| OS      | Path |
-| ------- | ---- |
-| macOS   | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` |
-| Windows | `%APPDATA%\Cursor\User\globalStorage\state.vscdb` |
-| Linux   | `~/.config/Cursor/User/globalStorage/state.vscdb` |
-
-This extension opens the database **read-only**, reads that token, and uses it to call **the same endpoint Cursor's own dashboard uses**:
-
-```
-GET https://cursor.com/api/usage-summary
-Cookie: WorkosCursorSessionToken=<userId>::<accessToken>
-```
-
-The extension never displays a credentials prompt of its own. If you sign out of Cursor, the token disappears and the extension shows a "sign in to Cursor" state until you sign back in — there is nothing in the extension's UI to "log into".
-
-The pace math:
+## Pace math
 
 ```
 elapsed   = clamp(now - cycleStart, 0, cycleLen)
 expected% = elapsed / cycleLen * 100
-delta     = actual% - expected%      // negative = under-using, positive = over-using
-projected = actual% / (elapsed / cycleLen)
+pace     = actual% - expected%      // negative = under-using, positive = over-using
 ```
 
 ## Settings
@@ -82,10 +60,11 @@ projected = actual% / (elapsed / cycleLen)
 ## Privacy & safety
 
 - **No telemetry.** No third-party hosts. The only network destination is `cursor.com`.
-- **No credential UI.** The extension only reads what Cursor itself wrote to your local disk.
+- **No credential UI.** The extension does not ask you for your password or session cookie, only reads what Cursor itself wrote to your local disk.
 - **Tokens and cookies stay off the logs.** The diagnostics channel avoids printing access tokens, JWT material, or `WorkosCursorSessionToken` values.
 - **Cache.** The last successful usage summary is stored in `context.globalState` (Cursor's normal extension-storage area) so the bar can still show a value when offline. Only the normalized fields shown above are cached — the raw API response is not.
 - **No write access to the Cursor database.** The DB is opened read-only; we don't fight Cursor's writer.
+
 
 ## Caveats
 
