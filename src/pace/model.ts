@@ -9,6 +9,13 @@ export interface BuildModelInput {
   show: ShowMode;
   onPaceThresholdPp: number;
   staleAfterMs: number;
+  /**
+   * Force the model into the "cached" state regardless of cache age.
+   * Used when we render from cache because the latest live fetch failed —
+   * the cache itself may still be young, but the bar should signal that
+   * the displayed numbers are not the result of the latest attempt.
+   */
+  forceStale?: boolean;
 }
 
 /**
@@ -68,7 +75,9 @@ export function buildPaceModel(input: BuildModelInput): PaceModel {
   }
 
   const reference = tracks[0].pace.cycle;
-  const isStale = input.nowMs - input.fetchedAtMs > input.staleAfterMs;
+  const isStale =
+    input.forceStale === true ||
+    input.nowMs - input.fetchedAtMs > input.staleAfterMs;
 
   return {
     tracks,

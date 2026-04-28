@@ -27,9 +27,9 @@ export function buildPaceTooltip(
 
   md.appendMarkdown(`**Cursor Usage Pace**\n\n`);
   md.appendMarkdown(
-    `Cycle: **${cycleStart} → ${cycleEnd}** · ${model.daysRemaining} day${
+    `Cycle: **${cycleStart} → ${cycleEnd}** · ${elapsedPct}% elapsed · **${model.daysRemaining} day${
       model.daysRemaining === 1 ? "" : "s"
-    } left · **${elapsedPct}% elapsed**\n\n`,
+    } left**\n\n`,
   );
 
   md.appendMarkdown(`| Track | Used | Pace |\n`);
@@ -41,7 +41,7 @@ export function buildPaceTooltip(
   md.appendMarkdown(`\n`);
 
   const freshness = model.isStale
-    ? `_Cached — last refreshed ${formatRelative(nowMs - model.fetchedAtMs)}_`
+    ? `_Offline — last refreshed ${formatRelative(nowMs - model.fetchedAtMs)}_`
     : `_Last refreshed ${formatRelative(nowMs - model.fetchedAtMs)}_`;
 
   const links = [
@@ -61,7 +61,7 @@ export function buildSignedOutTooltip(
   md.isTrusted = true;
   md.appendMarkdown(`**Cursor Usage Pace**\n\n`);
   md.appendMarkdown(
-    `No Cursor session found. Sign in to Cursor and the indicator will start working — this extension never asks you for credentials directly.\n\n`,
+    `Sign in to Cursor to see your usage pace.\n\n`,
   );
   md.appendMarkdown(
     `[Refresh](command:${commands.refresh}) · [Diagnostics](command:${commands.showDiagnostics})\n`,

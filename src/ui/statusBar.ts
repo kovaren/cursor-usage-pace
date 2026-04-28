@@ -57,7 +57,7 @@ export class PaceStatusBar implements vscode.Disposable {
       }
       case "signedOut":
         this.lastDataModel = undefined;
-        this.item.text = "$(warning) Cursor: sign in";
+        this.item.text = "$(warning) Cursor Usage Pace";
         this.item.tooltip = state.tooltip;
         this.item.backgroundColor = new vscode.ThemeColor(
           "statusBarItem.warningBackground",

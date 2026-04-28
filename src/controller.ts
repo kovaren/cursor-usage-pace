@@ -170,7 +170,9 @@ export class PaceController implements vscode.Disposable {
 
     const cached = this.cache.read();
     if (cached) {
-      this.renderModel(cached.summary, cached.fetchedAtMs, now);
+      this.renderModel(cached.summary, cached.fetchedAtMs, now, {
+        forceStale: true,
+      });
       return;
     }
     this.renderError(`${result.reason}: ${result.message}`);
@@ -180,6 +182,7 @@ export class PaceController implements vscode.Disposable {
     summary: UsageSummary,
     fetchedAtMs: number,
     nowMs: number,
+    options: { forceStale?: boolean } = {},
   ): void {
     const cfg = this.currentConfig;
     const staleAfterMs = Math.max(cfg.refreshIntervalMs * 2, 60_000);
@@ -190,6 +193,7 @@ export class PaceController implements vscode.Disposable {
       show: cfg.show,
       onPaceThresholdPp: cfg.onPaceThresholdPp,
       staleAfterMs,
+      forceStale: options.forceStale,
     });
     const tooltip = buildPaceTooltip(model, this.tooltipCommands, nowMs);
     this.statusBar.render({ kind: "data", model, tooltip });
