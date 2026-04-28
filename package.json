@@ -5,6 +5,10 @@
   "version": "0.1.0",
   "publisher": "ivan-kovarin",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kovaren/cursor-usage-pace"
+  },
   "engines": {
     "vscode": "^1.85.0",
     "node": ">=18"
@@ -16,8 +20,8 @@
     "cursor",
     "usage",
     "quota",
-    "pace",
-    "status bar"
+    "speed",
+    "pace"
   ],
   "main": "./out/extension.js",
   "activationEvents": [
