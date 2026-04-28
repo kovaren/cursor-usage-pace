@@ -47,6 +47,9 @@ export function activate(context: vscode.ExtensionContext): void {
         controller.onConfigurationChanged();
       }
     }),
+    vscode.window.onDidChangeWindowState((state) => {
+      if (state.focused) controller.checkForAuthChange();
+    }),
   );
 
   controller.start();

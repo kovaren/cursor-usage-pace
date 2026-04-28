@@ -324,6 +324,110 @@ describe("PaceController — offline / cache fallback", () => {
   });
 });
 
+describe("PaceController — checkForAuthChange", () => {
+  const TOKEN_A = makeFakeJwt("user_a");
+  const TOKEN_B = makeFakeJwt("user_b");
+
+  async function settleInitial(harness: Harness): Promise<void> {
+    await harness.controller.refresh();
+    await flushPromises();
+  }
+
+  it("triggers a refresh when a new token replaces the previous one", async () => {
+    const harness = makeHarness();
+    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "better-sqlite3" });
+    mockFetch.mockResolvedValue({ ok: true, summary: SUMMARY });
+    await settleInitial(harness);
+
+    const fetchCallsBefore = mockFetch.mock.calls.length;
+    mockReadToken.mockReturnValue({ token: TOKEN_B, strategy: "better-sqlite3" });
+
+    harness.controller.checkForAuthChange();
+    await flushPromises();
+
+    expect(mockFetch.mock.calls.length).toBeGreaterThan(fetchCallsBefore);
+
+    harness.controller.dispose();
+  });
+
+  it("does not trigger a refresh when the token is unchanged", async () => {
+    const harness = makeHarness();
+    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "better-sqlite3" });
+    mockFetch.mockResolvedValue({ ok: true, summary: SUMMARY });
+    await settleInitial(harness);
+
+    const fetchCallsBefore = mockFetch.mock.calls.length;
+
+    harness.controller.checkForAuthChange();
+    await flushPromises();
+
+    expect(mockFetch.mock.calls.length).toBe(fetchCallsBefore);
+
+    harness.controller.dispose();
+  });
+
+  it("does not refresh on focus probe when token disappears (sign-out path is interval-only)", async () => {
+    const harness = makeHarness();
+    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "better-sqlite3" });
+    mockFetch.mockResolvedValue({ ok: true, summary: SUMMARY });
+    await settleInitial(harness);
+    expect(harness.bar.last?.kind).toBe("data");
+
+    mockReadToken.mockImplementation(() => {
+      throw new TokenReadError("missing", "tokenMissing");
+    });
+
+    const fetchCallsBefore = mockFetch.mock.calls.length;
+
+    harness.controller.checkForAuthChange();
+    await flushPromises();
+
+    expect(mockFetch.mock.calls.length).toBe(fetchCallsBefore);
+    expect(harness.bar.last?.kind).toBe("data");
+
+    harness.controller.dispose();
+  });
+
+  it("triggers a refresh when the user signs back in (token reappears)", async () => {
+    const harness = makeHarness();
+    mockReadToken.mockImplementation(() => {
+      throw new TokenReadError("missing", "dbMissing");
+    });
+    await settleInitial(harness);
+    expect(harness.bar.last?.kind).toBe("signedOut");
+
+    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "better-sqlite3" });
+    mockFetch.mockResolvedValue({ ok: true, summary: SUMMARY });
+
+    harness.controller.checkForAuthChange();
+    await flushPromises();
+
+    expect(harness.bar.last?.kind).toBe("data");
+
+    harness.controller.dispose();
+  });
+
+  it("ignores transient read errors so disk hiccups do not flap the bar", async () => {
+    const harness = makeHarness();
+    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "better-sqlite3" });
+    mockFetch.mockResolvedValue({ ok: true, summary: SUMMARY });
+    await settleInitial(harness);
+
+    const fetchCallsBefore = mockFetch.mock.calls.length;
+    mockReadToken.mockImplementation(() => {
+      throw new TokenReadError("perms", "dbUnreadable");
+    });
+
+    harness.controller.checkForAuthChange();
+    await flushPromises();
+
+    expect(mockFetch.mock.calls.length).toBe(fetchCallsBefore);
+    expect(harness.bar.last?.kind).toBe("data");
+
+    harness.controller.dispose();
+  });
+});
+
 describe("PaceController — tooltip tick", () => {
   it("re-renders cached data while in data state", async () => {
     const harness = makeHarness();

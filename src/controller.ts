@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import * as vscode from "vscode";
 import { buildSessionCookieValue } from "./auth/jwt";
 import { resolveStateDbPath } from "./auth/statePath";
@@ -28,12 +29,20 @@ const TOOLTIP_REFRESH_INTERVAL_MS = 30_000;
 
 type DisplayType = "loading" | "data" | "signedOut" | "error";
 
+/**
+ * `string` = a hash of the locally-stored access token.
+ * `null`   = no usable token in the DB (signed out).
+ * `undefined` = DB was not read at yet (startup).
+ */
+type TokenFingerprint = string | null | undefined;
+
 export class PaceController implements vscode.Disposable {
   private timer: NodeJS.Timeout | undefined;
   private tooltipTimer: NodeJS.Timeout | undefined;
   private inFlight: Promise<void> | undefined;
   private currentConfig: ResolvedConfig;
   private currentState: DisplayType = "loading";
+  private lastTokenFingerprint: TokenFingerprint = undefined;
 
   constructor(
     private readonly statusBar: PaceStatusBar,
@@ -77,6 +86,45 @@ export class PaceController implements vscode.Disposable {
     void this.renderFromCacheOrLoading();
   }
 
+  /**
+   * Cheap re-read after the editor regains focus (e.g. browser sign-in
+   * completes)
+   */
+  checkForAuthChange(): void {
+    let next: TokenFingerprint;
+    try {
+      const dbPath = resolveStateDbPath(this.currentConfig.stateDbPath);
+      const result = readAccessTokenWithStrategy(dbPath);
+      next = fingerprintToken(result.token);
+    } catch (err) {
+      if (
+        err instanceof TokenReadError &&
+        (err.kind === "dbMissing" ||
+          err.kind === "tokenMissing" ||
+          err.kind === "tokenEmpty")
+      ) {
+        next = null;
+      } else {
+        // Transient read error — periodic refresh handles it later.
+        return;
+      }
+    }
+
+    const prev = this.lastTokenFingerprint;
+    this.lastTokenFingerprint = next;
+
+    if (prev === undefined) {
+      // start() drives the first refresh — avoid doubling up.
+      return;
+    }
+    if (next === null || prev === next) {
+      return;
+    }
+
+    this.diagnostics.log("Token appeared or rotated after focus; refreshing");
+    void this.refresh();
+  }
+
   dispose(): void {
     if (this.timer) {
       clearTimeout(this.timer);
@@ -107,6 +155,7 @@ export class PaceController implements vscode.Disposable {
       });
       this.diagnostics.log(`Token read via ${result.strategy}`);
       token = result.token;
+      this.lastTokenFingerprint = fingerprintToken(token);
     } catch (err) {
       if (err instanceof TokenReadError) {
         this.diagnostics.recordError(
@@ -114,6 +163,7 @@ export class PaceController implements vscode.Disposable {
           (err as Error & { cause?: unknown }).cause,
         );
         if (err.kind === "dbMissing" || err.kind === "tokenMissing" || err.kind === "tokenEmpty") {
+          this.lastTokenFingerprint = null;
           void this.cache.clear();
           this.renderSignedOut();
         } else {
@@ -254,4 +304,8 @@ export class PaceController implements vscode.Disposable {
     }
     this.timer = setTimeout(() => void this.refresh(), delayMs);
   }
+}
+
+function fingerprintToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex").slice(0, 16);
 }
