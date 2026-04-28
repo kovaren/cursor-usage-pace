@@ -77,13 +77,13 @@ projected = actual% / (elapsed / cycleLen)
 
 - **Cursor Usage Pace: Refresh now** — manual refresh (also bound to clicking the status bar item).
 - **Cursor Usage Pace: Open Cursor dashboard** — opens `cursor.com/dashboard` in your browser.
-- **Cursor Usage Pace: Show diagnostics** — opens the output channel with the last response summary, last error, and timing info. Token values are always **redacted** to `abcd…wxyz (len=N)`; the raw JWT is never written to logs.
+- **Cursor Usage Pace: Show diagnostics** — opens the output channel with the last response summary, last error, and timing info.
 
 ## Privacy & safety
 
 - **No telemetry.** No third-party hosts. The only network destination is `cursor.com`.
 - **No credential UI.** The extension only reads what Cursor itself wrote to your local disk.
-- **Tokens are never logged in plaintext.** A single `mask()` helper is the only path tokens take into the output channel.
+- **Tokens and cookies stay off the logs.** The diagnostics channel avoids printing access tokens, JWT material, or `WorkosCursorSessionToken` values.
 - **Cache.** The last successful usage summary is stored in `context.globalState` (Cursor's normal extension-storage area) so the bar can still show a value when offline. Only the normalized fields shown above are cached — the raw API response is not.
 - **No write access to the Cursor database.** The DB is opened read-only; we don't fight Cursor's writer.
 

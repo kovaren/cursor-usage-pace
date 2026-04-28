@@ -1,13 +1,8 @@
 import * as vscode from "vscode";
-import { mask } from "./util/redact";
-
-export { mask };
 
 /**
- * Single output-channel logger. Token values, cookies, and any other
- * Cursor-issued credential MUST be passed through `mask()` before being
- * appended — never raw — so a `Diagnostics: Show` from a user's machine
- * cannot accidentally leak their session.
+ * Single output-channel logger. Never logs access tokens, session cookies, or
+ * other credential material. Generic errors and API summaries may appear as plain text.
  */
 export class Diagnostics {
   private readonly channel: vscode.OutputChannel;

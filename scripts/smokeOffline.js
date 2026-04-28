@@ -2,10 +2,8 @@
 /**
  * Offline smoke check: exercises the real token-discovery and cookie-build
  * pipeline against the user's actual Cursor SQLite database, without making
- * any network calls and without printing any secret values. Prints only
- * masked diagnostics.
- *
- * Run after `npm run compile`:
+ * any network calls and without printing token or cookie values. Run after
+ * `npm run compile`:
  *   node scripts/smokeOffline.js
  *   node scripts/smokeOffline.js /custom/path/to/state.vscdb
  */
@@ -25,7 +23,6 @@ const {
 const { TokenReadError, readAccessTokenWithStrategy } = require(
   path.join(outDir, "auth", "tokenReader"),
 );
-const { mask } = require(path.join(outDir, "util", "redact"));
 
 function main() {
   const overridePath = process.argv[2];
@@ -58,17 +55,15 @@ function main() {
     }
     throw err;
   }
-  console.log(`Token discovered via ${strategy}: ${mask(token)}`);
+  console.log(`Token discovered via ${strategy} (token not printed)`);
   console.log(`Token expired (per JWT exp): ${isJwtExpired(token)}`);
 
-  let cookie;
   try {
-    cookie = buildSessionCookieValue(token);
+    buildSessionCookieValue(token);
   } catch (err) {
     console.log(`Cookie build failed: ${err.message}`);
     return 4;
   }
-  console.log(`Cookie value: ${mask(cookie)}`);
   console.log("OK — token discovery and cookie construction succeeded.");
   console.log("");
   console.log("Next steps:");

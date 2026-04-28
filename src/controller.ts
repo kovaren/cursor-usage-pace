@@ -13,7 +13,7 @@ import {
 } from "./api/usageClient";
 import { buildPaceModel } from "./pace/model";
 import { SummaryCache } from "./state/cache";
-import { Diagnostics, mask } from "./diagnostics";
+import { Diagnostics } from "./diagnostics";
 import { PaceStatusBar } from "./ui/statusBar";
 import {
   TooltipCommands,
@@ -184,13 +184,12 @@ export class PaceController implements vscode.Disposable {
     } catch (err) {
       const message = (err as Error).message ?? String(err);
       this.diagnostics.recordError(
-        `Could not parse access token (${mask(token)}): ${message}`,
+        `Could not parse access token: ${message}`,
       );
       this.renderSignedOut();
       this.scheduleNext(cfg.refreshIntervalMs);
       return;
     }
-    this.diagnostics.log(`Built session cookie ${mask(cookieValue)}`);
 
     const result = await fetchUsageSummary({
       cookieValue,
