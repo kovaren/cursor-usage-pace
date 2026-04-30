@@ -2,7 +2,7 @@
   "name": "cursor-usage-pace",
   "displayName": "Cursor Usage Pace",
   "description": "Status bar indicator showing whether you're ahead or behind on Cursor Auto+Composer and API quotas, given how far through the billing cycle you are.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "ivan-kovarin",
   "license": "MIT",
   "repository": {
@@ -13,6 +13,7 @@
     "vscode": "^1.85.0",
     "node": ">=18"
   },
+  "icon": "images/icon.png",
   "categories": [
     "Other"
   ],
