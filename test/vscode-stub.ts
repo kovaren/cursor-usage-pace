@@ -19,6 +19,7 @@ export class MarkdownString {
   value: string;
   isTrusted = false;
   supportThemeIcons = false;
+  supportHtml = false;
 
   constructor(value?: string, supportThemeIcons?: boolean) {
     this.value = value ?? "";

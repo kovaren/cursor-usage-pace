@@ -32,11 +32,9 @@ export function buildPaceTooltip(
     } left**\n\n`,
   );
 
-  md.appendMarkdown(`| Track | Used | Pace |\n`);
-  md.appendMarkdown(`| --- | ---: | --- |\n`);
+  md.supportHtml = true;
   for (const track of model.tracks) {
-    const { used, pace } = formatRow(track);
-    md.appendMarkdown(`| ${track.label} | ${used} | ${pace} |\n`);
+    md.appendMarkdown(formatTrackDashboard(track));
   }
   md.appendMarkdown(`\n`);
 
@@ -86,11 +84,43 @@ export function buildErrorTooltip(
   return md;
 }
 
-function formatRow(track: PaceTrack): { used: string; pace: string } {
-  return {
-    used: `${track.pace.actualPct.toFixed(0)}%`,
-    pace: formatPace(track.pace.deltaPp),
-  };
+const USAGE_BAR_WIDTH = 35;
+const BAR_FILLED = "━";
+const BAR_EMPTY = "┈";
+
+function formatTrackDashboard(track: PaceTrack): string {
+  const bar = formatUsageBar(track.pace.actualPct, USAGE_BAR_WIDTH);
+  const used = `${track.pace.actualPct.toFixed(0)}%`;
+  const pace = formatPace(track.pace.deltaPp);
+  const label = escapeHtml(track.label);
+  const barEscaped = escapeHtml(bar);
+  const usedEscaped = escapeHtml(used);
+  const tableLabelPace =
+    `<table width="100%"><tr>` +
+    `<td align="left"><strong>${label}</strong></td>` +
+    `<td align="right">${pace}</td>` +
+    `</tr></table>\n\n`;
+  const tableBarUsed =
+    `<table width="100%"><tr>` +
+    `<td align="left"><tt>${barEscaped}</tt></td>` +
+    `<td align="right">${usedEscaped} used</td>` +
+    `</tr></table>\n\n`;
+  return tableLabelPace + tableBarUsed;
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function formatUsageBar(actualPct: number, width: number): string {
+  const filled = Math.round(
+    (Math.min(100, Math.max(0, actualPct)) / 100) * width,
+  );
+  return BAR_FILLED.repeat(filled) + BAR_EMPTY.repeat(width - filled);
 }
 
 const PACE_UNDER_COLOR = "#008000"; // green
