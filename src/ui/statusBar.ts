@@ -47,7 +47,9 @@ export class PaceStatusBar implements vscode.Disposable {
       case "loading": {
         this.item.tooltip = "Fetching Cursor usage…";
         if (state.preserveLabel && this.lastDataModel) {
-          this.item.text = renderBody(this.lastDataModel);
+          this.item.text = renderBody(this.lastDataModel, {
+            refreshing: true,
+          });
           this.item.backgroundColor = pickBackground(this.lastDataModel);
         } else {
           this.item.text = "Cursor Usage Pace";
@@ -85,9 +87,16 @@ export class PaceStatusBar implements vscode.Disposable {
   }
 }
 
-function renderBody(model: PaceModel): string {
+function renderBody(
+  model: PaceModel,
+  opts: { refreshing?: boolean } = {},
+): string {
   const segments = model.tracks.map((t) => {
-    const sign = t.pace.deltaPp > 0 ? "$(arrow-up)" : "$(arrow-down)";
+    const sign = opts.refreshing
+      ? "$(sync~spin)"
+      : t.pace.deltaPp > 0
+        ? "$(arrow-up)"
+        : "$(arrow-down)";
     const pp = `${Math.abs(t.pace.deltaPp).toFixed(0)}%`;
     return `${t.shortLabel}${sign}${pp}`;
   });
