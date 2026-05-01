@@ -6,13 +6,19 @@ Cursor's own dashboard shows you *what* you have used (e.g. "Auto + Composer 12%
 
 ## Status bar
 
-Each configured track is shown inline with a directional arrow and the absolute delta:
+The status bar shows usage pace for **Auto** (Auto + Composer) and **API** models. Each figure compares quota use so far with what you'd expect at this date if that quota were depleted evenly across the billing window.
 
-```
-Auto ↑18% • API ↑12%        ← both burning faster than pace
-Auto ↓2%  • API ↓1%         ← both comfortably under pace
-Auto ↓27% • API ↓39%        ← heavily under-using
-```
+**`↑N%`** means you have burned **N** percent **more** tokens compared to a linear burn. At this rate you'll spend all tokens before the end of the billing month.
+
+**`↓N%`** means you have burned **N** percent **less** tokens compared to a linear burn. At this rate you'll have unused tokens left by the end of the billing month.
+
+
+| Status                 | Meaning                                     |
+| ---------------------- | ------------------------------------------- |
+| `Auto ↑18% • API ↑12%` | Burning too fast                            |
+| `Auto ↓2% • API ↓1%`   | Comfortably below expected burn rate        |
+| `Auto ↓57% • API ↓32%` | Heavily under-using, a lot of headroom left |
+
 
 ## Detailed view
 
@@ -21,16 +27,16 @@ Hover the status bar item for a full breakdown:
 ```
 Cursor Usage Pace
 
-Cycle: Apr 4 → May 4 · 77% elapsed · 8 days left
+Cycle: Apr 4 → May 4 · 53% elapsed · 14 days left
 
-| Track            | Used | Pace              |
-| Auto + Composer  | 12%  | underused by 65%  |
-| API              | 38%  | underused by 39%  |
-
-Last refreshed 2 min ago · Refresh · Dashboard · Diagnostics
+Auto + Composer	                            underused by 21%
+━━━━━━━━━━━━━━━━┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ 32% used
+API                                          overused by 16%
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ 69% used
+Last refreshed 4 min ago · Refresh · Dashboard · Diagnostics
 ```
 
-Pace values are colored: **green** = under pace (capacity to spare), **orange** = over pace (burning faster than expected).
+Values are colored: **green** = below the proportional benchmark (capacity to spare), **orange** = above it (using quota faster relative to elapsed time than an even spread).
 
 Clicking the bar or "Refresh" in the tooltip triggers a manual refresh.
 
@@ -44,12 +50,14 @@ pace     = actual% - expected%      // negative = under-using, positive = over-u
 
 ## Settings
 
-| Setting | Default | What it does |
-| ------- | ------- | ------------ |
-| `cursorUsagePace.refreshIntervalMinutes` | `10` | How often to refresh. Min 1, max 360. |
-| `cursorUsagePace.onPaceThresholdPp` | `3` | A track is "on pace" when its delta is within `±N` percentage points. |
-| `cursorUsagePace.show` | `auto+api` | What to render: `auto+api`, `auto`, `api`, or `total`. |
-| `cursorUsagePace.stateDbPath` | `""` | Override the auto-detected SQLite path. Tilde expansion supported. |
+
+| Setting                                  | Default    | What it does                                                          |
+| ---------------------------------------- | ---------- | --------------------------------------------------------------------- |
+| `cursorUsagePace.refreshIntervalMinutes` | `10`       | How often to refresh. Min 1, max 360.                                 |
+| `cursorUsagePace.onPaceThresholdPp`      | `3`        | A track is "on pace" when its delta is within `±N` percentage points. |
+| `cursorUsagePace.show`                   | `auto+api` | What to render: `auto+api`, `auto`, `api`, or `total`.                |
+| `cursorUsagePace.stateDbPath`            | `""`       | Override the auto-detected SQLite path. Tilde expansion supported.    |
+
 
 ## Commands
 
@@ -64,7 +72,6 @@ pace     = actual% - expected%      // negative = under-using, positive = over-u
 - **Tokens and cookies stay off the logs.** The diagnostics channel avoids printing access tokens, JWT material, or `WorkosCursorSessionToken` values.
 - **Cache.** The last successful usage summary is stored in `context.globalState` (Cursor's normal extension-storage area) so the bar can still show a value when offline. Only the normalized fields shown above are cached — the raw API response is not.
 - **No write access to the Cursor database.** The DB is opened read-only; we don't fight Cursor's writer.
-
 
 ## Caveats
 
