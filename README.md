@@ -1,6 +1,6 @@
 # Cursor Usage Pace
 
-A small Cursor / VS Code extension that shows in the status bar whether you are ahead or behind on your monthly Cursor quota, given how far through the billing cycle you are.
+Cursor extension that shows in the status bar whether you are ahead or behind on your monthly Cursor quota, given how far through the billing cycle you are.
 
 Cursor's own dashboard shows you *what* you have used (e.g. "Auto + Composer 12%, API 38%"). It does not tell you whether that is a lot or a little for the date. This extension does that math for you.
 
