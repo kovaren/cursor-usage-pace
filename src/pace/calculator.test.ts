@@ -12,26 +12,19 @@ describe("computePace", () => {
     expect(result.expectedPct).toBeCloseTo(76.667, 2);
     expect(result.deltaPp).toBeCloseTo(-38.667, 2);
     expect(result.projectedEndPct).toBeCloseTo(49.565, 2);
-    expect(result.status).toBe("behind");
     expect(result.cycle.daysRemaining).toBe(7);
   });
 
-  it("classifies onPace within +/- threshold", () => {
+  it("yields zero deltaPp when actual matches expected", () => {
     const now = Date.parse("2026-04-19T00:00:00.000Z");
-    const result = computePace({
-      actualPct: 50,
-      cycle,
-      nowMs: now,
-      onPaceThresholdPp: 3,
-    });
+    const result = computePace({ actualPct: 50, cycle, nowMs: now });
     expect(result.expectedPct).toBeCloseTo(50, 2);
-    expect(result.status).toBe("onPace");
+    expect(result.deltaPp).toBeCloseTo(0, 2);
   });
 
-  it("classifies ahead when burning faster than pace", () => {
+  it("yields a positive deltaPp when burning faster than pace", () => {
     const now = Date.parse("2026-04-09T00:00:00.000Z");
     const result = computePace({ actualPct: 60, cycle, nowMs: now });
-    expect(result.status).toBe("ahead");
     expect(result.deltaPp).toBeGreaterThan(0);
   });
 
@@ -40,7 +33,7 @@ describe("computePace", () => {
     expect(result.cycle.elapsedFraction).toBe(0);
     expect(result.expectedPct).toBe(0);
     expect(result.projectedEndPct).toBe(0);
-    expect(result.status).toBe("onPace");
+    expect(result.deltaPp).toBe(0);
   });
 
   it("clamps when now is before the cycle starts (clock skew)", () => {
@@ -82,22 +75,11 @@ describe("computePace", () => {
     });
     expect(result.cycle.totalMs).toBe(29 * 24 * 60 * 60 * 1000);
     expect(result.expectedPct).toBeCloseTo(50, 1);
-    expect(result.status).toBe("onPace");
+    expect(result.deltaPp).toBeCloseTo(0, 1);
   });
 
   it("clamps a negative actualPct to 0", () => {
     const result = computePace({ actualPct: -10, cycle, nowMs: startMs });
     expect(result.actualPct).toBe(0);
-  });
-
-  it("respects a custom onPaceThresholdPp", () => {
-    const now = Date.parse("2026-04-19T00:00:00.000Z");
-    const result = computePace({
-      actualPct: 55,
-      cycle,
-      nowMs: now,
-      onPaceThresholdPp: 10,
-    });
-    expect(result.status).toBe("onPace");
   });
 });

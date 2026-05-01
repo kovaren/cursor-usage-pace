@@ -13,7 +13,6 @@ function paceResult(overrides: Partial<PaceResult>): PaceResult {
     expectedPct: 50,
     deltaPp: 0,
     projectedEndPct: 0,
-    status: "onPace",
     cycle: {
       elapsedMs: 1,
       totalMs: 2,

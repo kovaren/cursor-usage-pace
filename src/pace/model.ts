@@ -7,7 +7,6 @@ export interface BuildModelInput {
   fetchedAtMs: number;
   nowMs: number;
   show: ShowMode;
-  onPaceThresholdPp: number;
   staleAfterMs: number;
   /**
    * Force the model into the "cached" state regardless of cache age.
@@ -34,7 +33,6 @@ export function buildPaceModel(input: BuildModelInput): PaceModel {
       actualPct: input.summary.plan.autoPercentUsed,
       cycle,
       nowMs: input.nowMs,
-      onPaceThresholdPp: input.onPaceThresholdPp,
     }),
   };
   const api: PaceTrack = {
@@ -44,7 +42,6 @@ export function buildPaceModel(input: BuildModelInput): PaceModel {
       actualPct: input.summary.plan.apiPercentUsed,
       cycle,
       nowMs: input.nowMs,
-      onPaceThresholdPp: input.onPaceThresholdPp,
     }),
   };
   const total: PaceTrack = {
@@ -54,7 +51,6 @@ export function buildPaceModel(input: BuildModelInput): PaceModel {
       actualPct: input.summary.plan.totalPercentUsed,
       cycle,
       nowMs: input.nowMs,
-      onPaceThresholdPp: input.onPaceThresholdPp,
     }),
   };
 

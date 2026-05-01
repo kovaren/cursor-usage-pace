@@ -105,9 +105,7 @@ function renderBody(
 }
 
 function pickBackground(model: PaceModel): vscode.ThemeColor | undefined {
-  const aheadOver = model.tracks.some(
-    (t) => t.pace.status === "ahead" && t.pace.deltaPp > ALERT_PP,
-  );
+  const aheadOver = model.tracks.some((t) => t.pace.deltaPp > ALERT_PP);
   if (aheadOver) {
     return new vscode.ThemeColor("statusBarItem.warningBackground");
   }

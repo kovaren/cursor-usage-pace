@@ -54,7 +54,6 @@ pace     = actual% - expected%      // negative = under-using, positive = over-u
 | Setting                                  | Default    | What it does                                                          |
 | ---------------------------------------- | ---------- | --------------------------------------------------------------------- |
 | `cursorUsagePace.refreshIntervalMinutes` | `10`       | How often to refresh. Min 1, max 360.                                 |
-| `cursorUsagePace.onPaceThresholdPp`      | `3`        | A track is "on pace" when its delta is within `±N` percentage points. |
 | `cursorUsagePace.show`                   | `auto+api` | What to render: `auto+api`, `auto`, `api`, or `total`.                |
 | `cursorUsagePace.stateDbPath`            | `""`       | Override the auto-detected SQLite path. Tilde expansion supported.    |
 

@@ -246,7 +246,6 @@ export class PaceController implements vscode.Disposable {
       fetchedAtMs,
       nowMs,
       show: cfg.show,
-      onPaceThresholdPp: cfg.onPaceThresholdPp,
       staleAfterMs,
       forceStale: options.forceStale,
     });

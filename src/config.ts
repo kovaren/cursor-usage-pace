@@ -5,7 +5,6 @@ export const CONFIG_SECTION = "cursorUsagePace";
 
 export interface ResolvedConfig {
   refreshIntervalMs: number;
-  onPaceThresholdPp: number;
   show: ShowMode;
   stateDbPath: string | undefined;
 }
@@ -21,12 +20,10 @@ export function readConfig(): ResolvedConfig {
     MIN_INTERVAL_MIN,
     MAX_INTERVAL_MIN,
   );
-  const threshold = Math.max(0, cfg.get<number>("onPaceThresholdPp", 3));
   const show = normalizeShow(cfg.get<string>("show", "auto+api"));
   const stateDbPath = (cfg.get<string>("stateDbPath", "") ?? "").trim();
   return {
     refreshIntervalMs: intervalMin * 60 * 1000,
-    onPaceThresholdPp: threshold,
     show,
     stateDbPath: stateDbPath.length > 0 ? stateDbPath : undefined,
   };

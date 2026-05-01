@@ -8,8 +8,6 @@ export interface CycleWindow {
   endMs: number;
 }
 
-export type PaceStatus = "ahead" | "behind" | "onPace";
-
 export interface PaceResult {
   actualPct: number;
   expectedPct: number;
@@ -17,7 +15,6 @@ export interface PaceResult {
   deltaPp: number;
   /** Linear projection of the end-of-cycle percentage. */
   projectedEndPct: number;
-  status: PaceStatus;
   cycle: {
     elapsedMs: number;
     totalMs: number;
@@ -30,18 +27,11 @@ export interface ComputePaceInput {
   actualPct: number;
   cycle: CycleWindow;
   nowMs: number;
-  /** Threshold in pp under which we say "on pace". Default: 3. */
-  onPaceThresholdPp?: number;
 }
 
-const DEFAULT_THRESHOLD_PP = 3;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export function computePace(input: ComputePaceInput): PaceResult {
-  const threshold = Math.max(
-    0,
-    input.onPaceThresholdPp ?? DEFAULT_THRESHOLD_PP,
-  );
   const totalMs = Math.max(0, input.cycle.endMs - input.cycle.startMs);
   if (totalMs <= 0) {
     return {
@@ -49,7 +39,6 @@ export function computePace(input: ComputePaceInput): PaceResult {
       expectedPct: 100,
       deltaPp: clampPct(input.actualPct) - 100,
       projectedEndPct: clampPct(input.actualPct),
-      status: classify(clampPct(input.actualPct) - 100, threshold),
       cycle: {
         elapsedMs: 0,
         totalMs: 0,
@@ -76,7 +65,6 @@ export function computePace(input: ComputePaceInput): PaceResult {
     expectedPct,
     deltaPp,
     projectedEndPct,
-    status: classify(deltaPp, threshold),
     cycle: {
       elapsedMs,
       totalMs,
@@ -90,12 +78,6 @@ function clampPct(value: number): number {
   if (!Number.isFinite(value)) return 0;
   if (value < 0) return 0;
   return value;
-}
-
-function classify(deltaPp: number, threshold: number): PaceStatus {
-  if (deltaPp > threshold) return "ahead";
-  if (deltaPp < -threshold) return "behind";
-  return "onPace";
 }
 
 function projectEnd(actualPct: number, elapsedFraction: number): number {

@@ -21,7 +21,6 @@ describe("buildPaceModel — isStale", () => {
       fetchedAtMs: nowMs - 60 * 1000,
       nowMs,
       show: "auto+api",
-      onPaceThresholdPp: 3,
       staleAfterMs: STALE_AFTER_MS,
     });
     expect(model.isStale).toBe(false);
@@ -33,7 +32,6 @@ describe("buildPaceModel — isStale", () => {
       fetchedAtMs: nowMs - 21 * 60 * 1000,
       nowMs,
       show: "auto+api",
-      onPaceThresholdPp: 3,
       staleAfterMs: STALE_AFTER_MS,
     });
     expect(model.isStale).toBe(true);
@@ -45,7 +43,6 @@ describe("buildPaceModel — isStale", () => {
       fetchedAtMs: nowMs - 30 * 1000,
       nowMs,
       show: "auto+api",
-      onPaceThresholdPp: 3,
       staleAfterMs: STALE_AFTER_MS,
       forceStale: true,
     });
@@ -58,7 +55,6 @@ describe("buildPaceModel — isStale", () => {
       fetchedAtMs: nowMs - 30 * 1000,
       nowMs,
       show: "auto+api",
-      onPaceThresholdPp: 3,
       staleAfterMs: STALE_AFTER_MS,
       forceStale: false,
     });
@@ -72,7 +68,6 @@ describe("buildPaceModel — isStale", () => {
       fetchedAtMs,
       nowMs,
       show: "auto+api",
-      onPaceThresholdPp: 3,
       staleAfterMs: STALE_AFTER_MS,
       forceStale: true,
     });
