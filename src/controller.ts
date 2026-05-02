@@ -13,7 +13,7 @@ import {
 } from "./api/usageClient";
 import { buildPaceModel } from "./pace/model";
 import { SummaryCache } from "./state/cache";
-import { Diagnostics } from "./diagnostics";
+import { Logger } from "./logger";
 import { PaceStatusBar } from "./ui/statusBar";
 import {
   TooltipCommands,
@@ -47,7 +47,7 @@ export class PaceController implements vscode.Disposable {
   constructor(
     private readonly statusBar: PaceStatusBar,
     private readonly cache: SummaryCache,
-    private readonly diagnostics: Diagnostics,
+    private readonly logger: Logger,
     private readonly tooltipCommands: TooltipCommands,
     private readonly extensionVersion: string,
   ) {
@@ -121,7 +121,7 @@ export class PaceController implements vscode.Disposable {
       return;
     }
 
-    this.diagnostics.log("Token appeared or rotated after focus; refreshing");
+    this.logger.log("Token appeared or rotated after focus; refreshing");
     void this.refresh();
   }
 
@@ -142,23 +142,23 @@ export class PaceController implements vscode.Disposable {
       this.statusBar.render({ kind: "loading", preserveLabel: true });
       this.currentState = "loading";
     }
-    this.diagnostics.log(
+    this.logger.log(
       `Refreshing (interval=${cfg.refreshIntervalMs / 60000}m, show=${cfg.show})`,
     );
 
     let token: string;
     try {
       const dbPath = resolveStateDbPath(cfg.stateDbPath);
-      this.diagnostics.log(`Reading token from ${dbPath}`);
+      this.logger.log(`Reading token from ${dbPath}`);
       const result = readAccessTokenWithStrategy(dbPath, {
-        log: (msg) => this.diagnostics.log(`  ${msg}`),
+        log: (msg) => this.logger.log(`  ${msg}`),
       });
-      this.diagnostics.log(`Token read via ${result.strategy}`);
+      this.logger.log(`Token read via ${result.strategy}`);
       token = result.token;
       this.lastTokenFingerprint = fingerprintToken(token);
     } catch (err) {
       if (err instanceof TokenReadError) {
-        this.diagnostics.recordError(
+        this.logger.recordError(
           `Token read failed: ${err.kind} — ${err.message}`,
           (err as Error & { cause?: unknown }).cause,
         );
@@ -171,7 +171,7 @@ export class PaceController implements vscode.Disposable {
         }
       } else {
         const message = (err as Error).message ?? String(err);
-        this.diagnostics.recordError(`Unexpected token read error: ${message}`, err);
+        this.logger.recordError(`Unexpected token read error: ${message}`, err);
         this.renderError(message);
       }
       this.scheduleNext(cfg.refreshIntervalMs);
@@ -183,7 +183,7 @@ export class PaceController implements vscode.Disposable {
       cookieValue = buildSessionCookieValue(token);
     } catch (err) {
       const message = (err as Error).message ?? String(err);
-      this.diagnostics.recordError(
+      this.logger.recordError(
         `Could not parse access token: ${message}`,
       );
       this.renderSignedOut();
@@ -203,7 +203,7 @@ export class PaceController implements vscode.Disposable {
     const now = Date.now();
     if (result.ok) {
       void this.cache.write(result.summary, now);
-      this.diagnostics.recordResponseSummary(
+      this.logger.recordResponseSummary(
         `auto=${result.summary.plan.autoPercentUsed.toFixed(1)}% ` +
           `api=${result.summary.plan.apiPercentUsed.toFixed(1)}% ` +
           `cycle=${new Date(result.summary.billingCycle.startMs).toISOString().slice(0, 10)}` +
@@ -213,7 +213,7 @@ export class PaceController implements vscode.Disposable {
       return;
     }
 
-    this.diagnostics.recordError(
+    this.logger.recordError(
       `Fetch failed: ${result.reason}${result.status ? ` (${result.status})` : ""} — ${result.message}`,
     );
 

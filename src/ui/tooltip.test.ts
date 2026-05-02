@@ -42,7 +42,7 @@ function minimalModel(tracks: PaceTrack[]): PaceModel {
 const commands = {
   refresh: "cursorUsagePace.refresh",
   openDashboard: "cursorUsagePace.openDashboard",
-  showDiagnostics: "cursorUsagePace.showDiagnostics",
+  showLogs: "cursorUsagePace.showLogs",
 };
 
 function firstBarSegment(md: vscode.MarkdownString): string {
@@ -124,5 +124,38 @@ describe("buildPaceTooltip — progress bars", () => {
       "<strong>Auto &amp; API &lt;em class=&quot;x&quot;&gt;</strong>",
     );
     expect(md.value).not.toContain('<em class="x">');
+  });
+});
+
+describe("buildPaceTooltip — bottom action row", () => {
+  const nowMs = Date.parse("2026-04-15T14:00:00.000Z");
+
+  function lastTableRow(md: vscode.MarkdownString): string {
+    const matches = [...md.value.matchAll(/<table[^>]*>[\s\S]*?<\/table>/g)];
+    expect(matches.length).toBeGreaterThan(0);
+    return matches[matches.length - 1][0];
+  }
+
+  it("renders freshness in the left cell and links in the right cell", () => {
+    const md = buildPaceTooltip(
+      minimalModel([track("Auto", paceResult({ actualPct: 10 }))]),
+      commands,
+      nowMs,
+    );
+    const row = lastTableRow(md);
+    expect(row).toContain('<td align="left"><em>Last refreshed');
+    expect(row).toMatch(
+      /<td align="right">.*<a href="command:cursorUsagePace\.refresh">Refresh<\/a>.*<a href="command:cursorUsagePace\.openDashboard">Dashboard<\/a>.*<a href="command:cursorUsagePace\.showLogs">Logs<\/a>.*<\/td>/,
+    );
+  });
+
+  it("flags the offline state in the freshness cell when stale", () => {
+    const stale: PaceModel = {
+      ...minimalModel([track("Auto", paceResult({ actualPct: 10 }))]),
+      isStale: true,
+    };
+    const md = buildPaceTooltip(stale, commands, nowMs);
+    const row = lastTableRow(md);
+    expect(row).toContain("Offline — last refreshed");
   });
 });

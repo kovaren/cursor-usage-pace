@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { TokenReadError } from "./auth/tokenReader";
 import { PaceController } from "./controller";
 import { SummaryCache } from "./state/cache";
-import type { Diagnostics } from "./diagnostics";
+import type { Logger } from "./logger";
 import type { PaceStatusBar, StatusBarState } from "./ui/statusBar";
 import type {
   UsageFetchResult,
@@ -80,7 +80,7 @@ interface Harness {
   controller: PaceController;
   bar: FakeStatusBar;
   cache: SummaryCache;
-  diagnostics: Diagnostics;
+  logger: Logger;
 }
 
 function makeHarness(seed?: { fetchedAtMs: number }): Harness {
@@ -90,23 +90,23 @@ function makeHarness(seed?: { fetchedAtMs: number }): Harness {
   if (seed) {
     void cache.write(SUMMARY, seed.fetchedAtMs);
   }
-  const diagnostics = {
+  const logger = {
     log: vi.fn(),
     recordError: vi.fn(),
     recordResponseSummary: vi.fn(),
-  } as unknown as Diagnostics;
+  } as unknown as Logger;
   const controller = new PaceController(
     bar as unknown as PaceStatusBar,
     cache,
-    diagnostics,
+    logger,
     {
       refresh: "cmd.refresh",
       openDashboard: "cmd.dashboard",
-      showDiagnostics: "cmd.diag",
+      showLogs: "cmd.logs",
     },
     "test",
   );
-  return { controller, bar, cache, diagnostics };
+  return { controller, bar, cache, logger };
 }
 
 function flushPromises(): Promise<void> {

@@ -4,7 +4,7 @@ import * as vscode from "vscode";
  * Single output-channel logger. Never logs access tokens, session cookies, or
  * other credential material. Generic errors and API summaries may appear as plain text.
  */
-export class Diagnostics {
+export class Logger {
   private readonly channel: vscode.OutputChannel;
   private lastError: string | undefined;
   private lastResponseSummary: string | undefined;
@@ -31,10 +31,10 @@ export class Diagnostics {
 
   show(): void {
     this.channel.appendLine("");
-    this.channel.appendLine("--- Diagnostics snapshot ---");
+    this.channel.appendLine("--- Logs snapshot ---");
     this.channel.appendLine(`Last response: ${this.lastResponseSummary ?? "(none)"}`);
     this.channel.appendLine(`Last error:    ${this.lastError ?? "(none)"}`);
-    this.channel.appendLine("----------------------------");
+    this.channel.appendLine("---------------------");
     this.channel.show(true);
   }
 

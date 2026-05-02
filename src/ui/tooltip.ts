@@ -4,7 +4,7 @@ import { PaceModel, PaceTrack } from "./statusBar";
 export interface TooltipCommands {
   refresh: string;
   openDashboard: string;
-  showDiagnostics: string;
+  showLogs: string;
 }
 
 const SHORT_DATE: Intl.DateTimeFormatOptions = {
@@ -38,17 +38,22 @@ export function buildPaceTooltip(
   }
   md.appendMarkdown(`\n`);
 
-  const freshness = model.isStale
-    ? `_Offline — last refreshed ${formatRelative(nowMs - model.fetchedAtMs)}_`
-    : `_Last refreshed ${formatRelative(nowMs - model.fetchedAtMs)}_`;
+  const freshnessText = model.isStale
+    ? `Offline — last refreshed ${formatRelative(nowMs - model.fetchedAtMs)}`
+    : `Last refreshed ${formatRelative(nowMs - model.fetchedAtMs)}`;
 
   const links = [
-    `[Refresh](command:${commands.refresh})`,
-    `[Dashboard](command:${commands.openDashboard})`,
-    `[Diagnostics](command:${commands.showDiagnostics})`,
+    htmlCommandLink("Refresh", commands.refresh),
+    htmlCommandLink("Dashboard", commands.openDashboard),
+    htmlCommandLink("Logs", commands.showLogs),
   ].join(" · ");
 
-  md.appendMarkdown(`${freshness} · ${links}\n`);
+  md.appendMarkdown(
+    `<table width="100%"><tr>` +
+      `<td align="left"><em>${escapeHtml(freshnessText)}</em></td>` +
+      `<td align="right">${links}</td>` +
+      `</tr></table>\n`,
+  );
   return md;
 }
 
@@ -62,7 +67,7 @@ export function buildSignedOutTooltip(
     `Sign in to Cursor to see your usage pace.\n\n`,
   );
   md.appendMarkdown(
-    `[Refresh](command:${commands.refresh}) · [Diagnostics](command:${commands.showDiagnostics})\n`,
+    `[Refresh](command:${commands.refresh}) · [Logs](command:${commands.showLogs})\n`,
   );
   return md;
 }
@@ -79,7 +84,7 @@ export function buildErrorTooltip(
     `\nThis usually means Cursor's usage endpoint is unreachable or has changed.\n\n`,
   );
   md.appendMarkdown(
-    `[Refresh](command:${commands.refresh}) · [Diagnostics](command:${commands.showDiagnostics})\n`,
+    `[Refresh](command:${commands.refresh}) · [Logs](command:${commands.showLogs})\n`,
   );
   return md;
 }
@@ -114,6 +119,13 @@ function escapeHtml(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+// Markdown-style `[label](command:foo)` links don't get parsed when they sit
+// inside an inline HTML block (the `<table>` row), so anchors with explicit
+// `command:` hrefs are used instead. Trusted MarkdownString permits these.
+function htmlCommandLink(label: string, command: string): string {
+  return `<a href="command:${encodeURI(command)}">${escapeHtml(label)}</a>`;
 }
 
 function formatUsageBar(actualPct: number, width: number): string {

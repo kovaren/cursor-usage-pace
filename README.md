@@ -31,9 +31,11 @@ Cycle: Apr 4 → May 4 · 53% elapsed · 14 days left
 
 Auto + Composer	                            underused by 21%
 ━━━━━━━━━━━━━━━━┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ 32% used
+
 API                                          overused by 16%
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ 69% used
-Last refreshed 4 min ago · Refresh · Dashboard · Diagnostics
+
+Last refreshed 4 min ago          Refresh · Dashboard · Logs
 ```
 
 Values are colored: **green** = below the proportional benchmark (capacity to spare), **orange** = above it (using quota faster relative to elapsed time than an even spread).
@@ -51,24 +53,24 @@ pace     = actual% - expected%      // negative = under-using, positive = over-u
 ## Settings
 
 
-| Setting                                  | Default    | What it does                                                          |
-| ---------------------------------------- | ---------- | --------------------------------------------------------------------- |
-| `cursorUsagePace.refreshIntervalMinutes` | `10`       | How often to refresh. Min 1, max 360.                                 |
-| `cursorUsagePace.show`                   | `auto+api` | What to render: `auto+api`, `auto`, `api`, or `total`.                |
-| `cursorUsagePace.stateDbPath`            | `""`       | Override the auto-detected SQLite path. Tilde expansion supported.    |
+| Setting                                  | Default    | What it does                                                       |
+| ---------------------------------------- | ---------- | ------------------------------------------------------------------ |
+| `cursorUsagePace.refreshIntervalMinutes` | `10`       | How often to refresh. Min 1, max 360.                              |
+| `cursorUsagePace.show`                   | `auto+api` | What to render: `auto+api`, `auto`, `api`, or `total`.             |
+| `cursorUsagePace.stateDbPath`            | `""`       | Override the auto-detected SQLite path. Tilde expansion supported. |
 
 
 ## Commands
 
 - **Cursor Usage Pace: Refresh now** — manual refresh (also bound to clicking the status bar item).
 - **Cursor Usage Pace: Open Cursor dashboard** — opens `cursor.com/dashboard` in your browser.
-- **Cursor Usage Pace: Show diagnostics** — opens the output channel with the last response summary, last error, and timing info.
+- **Cursor Usage Pace: Show logs** — opens the output channel with the last response summary, last error, and timing info.
 
 ## Privacy & safety
 
 - **No telemetry.** No third-party hosts. The only network destination is `cursor.com`.
 - **No credential UI.** The extension does not ask you for your password or session cookie, only reads what Cursor itself wrote to your local disk.
-- **Tokens and cookies stay off the logs.** The diagnostics channel avoids printing access tokens, JWT material, or `WorkosCursorSessionToken` values.
+- **Tokens and cookies stay off the logs.** The logs channel avoids printing access tokens, JWT material, or `WorkosCursorSessionToken` values.
 - **Cache.** The last successful usage summary is stored in `context.globalState` (Cursor's normal extension-storage area) so the bar can still show a value when offline. Only the normalized fields shown above are cached — the raw API response is not.
 - **No write access to the Cursor database.** The DB is opened read-only; we don't fight Cursor's writer.
 
@@ -81,9 +83,9 @@ pace     = actual% - expected%      // negative = under-using, positive = over-u
 ## Troubleshooting
 
 - **Status bar shows "Cursor: sign in"** — sign in to Cursor and click the bar to refresh.
-- **Status bar shows "Cursor Usage Pace" in warning color** — open *Cursor Usage Pace: Show diagnostics* to see the last error. Common causes: temporary 5xx, network down, schema drift on `usage-summary`.
+- **Status bar shows "Cursor Usage Pace" in warning color** — open *Cursor Usage Pace: Show logs* to see the last error. Common causes: temporary 5xx, network down, schema drift on `usage-summary`.
 - **Numbers look wrong** — compare to [cursor.com/dashboard](https://cursor.com/dashboard). The dashboard is the source of truth; this extension only reframes it.
-- **Diagnostics show "better-sqlite3 failed: …"** — The `better-sqlite3` native module ships prebuilt binaries for Node.js, but Cursor runs Electron, so the prebuilt binary doesn't always match the host ABI. The extension falls back automatically to the system `sqlite3` CLI for that reason, and your status bar should still update via that path. macOS and most Linux distros include `sqlite3` by default; on Windows, [install it](https://www.sqlite.org/download.html) and ensure it's in `PATH`. You can override the binary path via the `CURSOR_USAGE_PACE_SQLITE3` environment variable.
+- **Logs show "better-sqlite3 failed: …"** — The `better-sqlite3` native module ships prebuilt binaries for Node.js, but Cursor runs Electron, so the prebuilt binary doesn't always match the host ABI. The extension falls back automatically to the system `sqlite3` CLI for that reason, and your status bar should still update via that path. macOS and most Linux distros include `sqlite3` by default; on Windows, [install it](https://www.sqlite.org/download.html) and ensure it's in `PATH`. You can override the binary path via the `CURSOR_USAGE_PACE_SQLITE3` environment variable.
 
 ## License
 

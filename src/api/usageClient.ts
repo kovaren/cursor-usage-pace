@@ -5,7 +5,7 @@
  *
  * This endpoint is undocumented and may change. We deliberately keep the
  * parser permissive (multiple field names, percentage normalization) and
- * surface the raw response on success so the extension's diagnostics view
+ * surface the raw response on success so the extension's logs view
  * can show the user exactly what came back.
  */
 

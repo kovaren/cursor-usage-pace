@@ -31,7 +31,7 @@ export class TokenReadError extends Error {
 export interface ReadAccessTokenOptions {
   /**
    * Receives one human-readable line per attempt so the extension's
-   * diagnostics can show which strategy succeeded or how each failed.
+   * logs can show which strategy succeeded or how each failed.
    */
   log?: (message: string) => void;
 }
