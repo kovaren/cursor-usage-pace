@@ -154,10 +154,10 @@ function formatPace(deltaPp: number): string {
   if (Math.abs(deltaPp) < 0.05) return "on pace";
   if (deltaPp < 0) {
     const text = `underused by ${formatPercent(Math.abs(deltaPp))}`;
-    return `<span style="color:${PACE_UNDER_COLOR};">${text}</span>`;
+    return `<span style="color:${PACE_UNDER_COLOR};"><strong>${text}</strong></span>`;
   }
   const text = `overused by ${formatPercent(deltaPp)}`;
-  return `<span style="color:${PACE_OVER_COLOR};">${text}</span>`;
+  return `<span style="color:${PACE_OVER_COLOR};"><strong>${text}</strong></span>`;
 }
 
 function formatDate(ms: number): string {
