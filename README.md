@@ -8,6 +8,8 @@ Cursor's own dashboard shows you *what* you have used (e.g. "Auto + Composer 12%
 
 The status bar shows usage pace for **Auto** (Auto + Composer) and **API** models. Each figure compares quota use so far with what you'd expect at this date if that quota were depleted evenly across the billing window.
 
+[![Detailed tooltip: cycle, Auto + Composer and API pace bars, refresh actions](images/statusbar.png)](images/statusbar.png)
+
 **`↑N%`** means you have burned **N** percent **more** tokens compared to a linear burn. At this rate you'll spend all tokens before the end of the billing month.
 
 **`↓N%`** means you have burned **N** percent **less** tokens compared to a linear burn. At this rate you'll have unused tokens left by the end of the billing month.
@@ -24,21 +26,7 @@ The status bar shows usage pace for **Auto** (Auto + Composer) and **API** model
 
 Hover the status bar item for a full breakdown:
 
-```
-Cursor Usage Pace
-
-Cycle: Apr 4 → May 4 · 53% elapsed · 14 days left
-
-Auto + Composer	                            underused by 21%
-━━━━━━━━━━━━━━━━┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ 32% used
-
-API                                          overused by 16%
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ 69% used
-
-Last refreshed 4 min ago          Refresh · Dashboard · Logs
-```
-
-Values are colored: **green** = below the proportional benchmark (capacity to spare), **orange** = above it (using quota faster relative to elapsed time than an even spread).
+[![Detailed tooltip: cycle, Auto + Composer and API pace bars, refresh actions](images/tooltip.png)](images/tooltip.png)
 
 Clicking the bar or "Refresh" in the tooltip triggers a manual refresh.
 

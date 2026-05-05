@@ -27,7 +27,7 @@ export function buildPaceTooltip(
 
   md.appendMarkdown(`**Cursor Usage Pace**\n\n`);
   md.appendMarkdown(
-    `Cycle: **${cycleStart} → ${cycleEnd}** · ${elapsedPct} elapsed · **${model.daysRemaining} day${
+    `Cycle: **${cycleStart} → ${cycleEnd}** · ${elapsedPct} time elapsed · **${model.daysRemaining} day${
       model.daysRemaining === 1 ? "" : "s"
     } left**\n\n`,
   );
