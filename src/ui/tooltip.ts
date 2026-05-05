@@ -140,14 +140,15 @@ const PACE_OVER_COLOR = "#FFA500"; // orange
 
 // Sub-1% values are common right after a billing cycle resets, and rounding
 // them to whole percent makes the tooltip read "0%" while Cursor's own
-// dashboard shows "1%". Show one decimal for small magnitudes so the user
-// can see what's actually going on.
+// dashboard shows "1%". Otherwise show up to one decimal, dropping a
+// trailing ".0" so whole values stay compact (e.g. 53.2% vs 53%).
 export function formatPercent(value: number): string {
   if (!Number.isFinite(value) || value === 0) return "0%";
   const abs = Math.abs(value);
   if (abs < 0.05) return value > 0 ? "<0.1%" : ">-0.1%";
-  if (abs < 10) return `${value.toFixed(1)}%`;
-  return `${value.toFixed(0)}%`;
+  const s = value.toFixed(1);
+  const trimmed = s.endsWith(".0") ? s.slice(0, -2) : s;
+  return `${trimmed}%`;
 }
 
 function formatPace(deltaPp: number): string {

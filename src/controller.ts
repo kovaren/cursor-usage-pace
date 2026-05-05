@@ -22,6 +22,10 @@ import {
   buildSignedOutTooltip,
 } from "./ui/tooltip";
 import { ResolvedConfig, readConfig } from "./config";
+import {
+  SCREENSHOT_TOOLTIP_DEMO,
+  screenshotDemoRenderInputs,
+} from "./screenshotDemoData";
 
 const USER_AGENT_BASE = "cursor-usage-pace";
 
@@ -240,24 +244,32 @@ export class PaceController implements vscode.Disposable {
     nowMs: number,
     options: { forceStale?: boolean } = {},
   ): void {
+    const demo = screenshotDemoRenderInputs();
+    const effectiveSummary = demo?.summary ?? summary;
+    const effectiveFetchedAt = demo?.fetchedAtMs ?? fetchedAtMs;
+    const effectiveNow = demo?.nowMs ?? nowMs;
+
     const cfg = this.currentConfig;
     const staleAfterMs = Math.max(cfg.refreshIntervalMs * 2, 60_000);
-    const model = buildPaceModel({
-      summary,
-      fetchedAtMs,
-      nowMs,
+    let model = buildPaceModel({
+      summary: effectiveSummary,
+      fetchedAtMs: effectiveFetchedAt,
+      nowMs: effectiveNow,
       show: cfg.show,
       staleAfterMs,
       forceStale: options.forceStale,
     });
+    if (SCREENSHOT_TOOLTIP_DEMO) {
+      model = { ...model, daysRemaining: 14 };
+    }
     this.logger.log(
-      `Render: auto=${summary.plan.autoPercentUsed.toFixed(3)}% ` +
-        `api=${summary.plan.apiPercentUsed.toFixed(3)}% ` +
-        `total=${summary.plan.totalPercentUsed.toFixed(3)}% ` +
-        `fetchedAt=${new Date(fetchedAtMs).toISOString()} ` +
+      `Render: auto=${effectiveSummary.plan.autoPercentUsed.toFixed(3)}% ` +
+        `api=${effectiveSummary.plan.apiPercentUsed.toFixed(3)}% ` +
+        `total=${effectiveSummary.plan.totalPercentUsed.toFixed(3)}% ` +
+        `fetchedAt=${new Date(effectiveFetchedAt).toISOString()} ` +
         `forceStale=${options.forceStale === true}`,
     );
-    const tooltip = buildPaceTooltip(model, this.tooltipCommands, nowMs);
+    const tooltip = buildPaceTooltip(model, this.tooltipCommands, effectiveNow);
     this.statusBar.render({ kind: "data", model, tooltip });
     this.currentState = "data";
   }
