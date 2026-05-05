@@ -23,11 +23,11 @@ export function buildPaceTooltip(
 
   const cycleStart = formatDate(model.cycleStartMs);
   const cycleEnd = formatDate(model.cycleEndMs);
-  const elapsedPct = Math.round(model.elapsedFraction * 100);
+  const elapsedPct = formatPercent(model.elapsedFraction * 100);
 
   md.appendMarkdown(`**Cursor Usage Pace**\n\n`);
   md.appendMarkdown(
-    `Cycle: **${cycleStart} → ${cycleEnd}** · ${elapsedPct}% elapsed · **${model.daysRemaining} day${
+    `Cycle: **${cycleStart} → ${cycleEnd}** · ${elapsedPct} elapsed · **${model.daysRemaining} day${
       model.daysRemaining === 1 ? "" : "s"
     } left**\n\n`,
   );
@@ -95,7 +95,7 @@ const BAR_EMPTY = "┈";
 
 function formatTrackDashboard(track: PaceTrack): string {
   const bar = formatUsageBar(track.pace.actualPct, USAGE_BAR_WIDTH);
-  const used = `${track.pace.actualPct.toFixed(0)}%`;
+  const used = formatPercent(track.pace.actualPct);
   const pace = formatPace(track.pace.deltaPp);
   const label = escapeHtml(track.label);
   const barEscaped = escapeHtml(bar);
@@ -138,14 +138,25 @@ function formatUsageBar(actualPct: number, width: number): string {
 const PACE_UNDER_COLOR = "#008000"; // green
 const PACE_OVER_COLOR = "#FFA500"; // orange
 
+// Sub-1% values are common right after a billing cycle resets, and rounding
+// them to whole percent makes the tooltip read "0%" while Cursor's own
+// dashboard shows "1%". Show one decimal for small magnitudes so the user
+// can see what's actually going on.
+export function formatPercent(value: number): string {
+  if (!Number.isFinite(value) || value === 0) return "0%";
+  const abs = Math.abs(value);
+  if (abs < 0.05) return value > 0 ? "<0.1%" : ">-0.1%";
+  if (abs < 10) return `${value.toFixed(1)}%`;
+  return `${value.toFixed(0)}%`;
+}
+
 function formatPace(deltaPp: number): string {
-  const rounded = Math.round(deltaPp);
-  if (rounded === 0) return "on pace";
-  if (rounded < 0) {
-    const text = `underused by ${Math.abs(rounded)}%`;
+  if (Math.abs(deltaPp) < 0.05) return "on pace";
+  if (deltaPp < 0) {
+    const text = `underused by ${formatPercent(Math.abs(deltaPp))}`;
     return `<span style="color:${PACE_UNDER_COLOR};">${text}</span>`;
   }
-  const text = `overused by ${rounded}%`;
+  const text = `overused by ${formatPercent(deltaPp)}`;
   return `<span style="color:${PACE_OVER_COLOR};">${text}</span>`;
 }
 

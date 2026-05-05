@@ -94,6 +94,7 @@ function makeHarness(seed?: { fetchedAtMs: number }): Harness {
     log: vi.fn(),
     recordError: vi.fn(),
     recordResponseSummary: vi.fn(),
+    recordRawResponse: vi.fn(),
   } as unknown as Logger;
   const controller = new PaceController(
     bar as unknown as PaceStatusBar,

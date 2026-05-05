@@ -146,12 +146,18 @@ export function parseUsageSummary(raw: unknown): UsageSummary {
   }
 
   const planSource = findPlanLikeContainer(root);
+  // Only field names with explicit "Percent" semantics are accepted. Earlier
+  // versions also fell back to `autoUsage`/`apiUsage`, but those names are
+  // ambiguous: in some responses they appear to carry a raw count (e.g.
+  // number of Auto messages used) rather than a 0..100 percentage, which
+  // produced large spurious readings (e.g. tooltip showing 69% when
+  // cursor.com showed <1%). If the percent fields are truly missing we'd
+  // rather fail loudly than misinterpret a count as a percent.
   const autoPct = normalizePercent(
     pickFirst(planSource, [
       "autoPercentUsed",
       "autoPercentageUsed",
       "autoUsedPercent",
-      "autoUsage",
     ]),
   );
   const apiPct = normalizePercent(
@@ -159,7 +165,6 @@ export function parseUsageSummary(raw: unknown): UsageSummary {
       "apiPercentUsed",
       "apiPercentageUsed",
       "apiUsedPercent",
-      "apiUsage",
     ]),
   );
   const totalPct = normalizePercent(
@@ -252,7 +257,7 @@ function parseDate(value: unknown): number | null {
 
 function normalizePercent(value: unknown): number | null {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
-  if (value <= 1 && value > 0) return value * 100;
+  if (value < 0) return 0;
   return value;
 }
 

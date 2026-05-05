@@ -209,6 +209,7 @@ export class PaceController implements vscode.Disposable {
           `cycle=${new Date(result.summary.billingCycle.startMs).toISOString().slice(0, 10)}` +
           `→${new Date(result.summary.billingCycle.endMs).toISOString().slice(0, 10)}`,
       );
+      this.logger.recordRawResponse(result.summary.raw);
       this.renderModel(result.summary, now, now);
       return;
     }
@@ -249,6 +250,13 @@ export class PaceController implements vscode.Disposable {
       staleAfterMs,
       forceStale: options.forceStale,
     });
+    this.logger.log(
+      `Render: auto=${summary.plan.autoPercentUsed.toFixed(3)}% ` +
+        `api=${summary.plan.apiPercentUsed.toFixed(3)}% ` +
+        `total=${summary.plan.totalPercentUsed.toFixed(3)}% ` +
+        `fetchedAt=${new Date(fetchedAtMs).toISOString()} ` +
+        `forceStale=${options.forceStale === true}`,
+    );
     const tooltip = buildPaceTooltip(model, this.tooltipCommands, nowMs);
     this.statusBar.render({ kind: "data", model, tooltip });
     this.currentState = "data";

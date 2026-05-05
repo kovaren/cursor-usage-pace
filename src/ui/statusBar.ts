@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { PaceResult } from "../pace/calculator";
+import { formatPercent } from "./tooltip";
 
 export type ShowMode = "auto+api" | "auto" | "api" | "total";
 
@@ -97,7 +98,7 @@ function renderBody(
       : t.pace.deltaPp > 0
         ? "$(arrow-up)"
         : "$(arrow-down)";
-    const pp = `${Math.abs(t.pace.deltaPp).toFixed(0)}%`;
+    const pp = formatPercent(Math.abs(t.pace.deltaPp));
     return `${t.shortLabel}${sign}${pp}`;
   });
   const stale = model.isStale ? " $(history)" : "";

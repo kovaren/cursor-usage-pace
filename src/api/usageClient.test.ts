@@ -25,19 +25,21 @@ describe("parseUsageSummary", () => {
     expect(summary.plan.totalPercentUsed).toBe(17);
   });
 
-  it("normalizes 0..1 fractional percentages to 0..100", () => {
+  it("treats sub-1% values as percentages, not 0..1 fractions", () => {
+    // Regression: the endpoint returns percentages on a 0..100 scale, so
+    // 0.29 means "0.29%". Earlier code rescaled this to 29%.
     const summary = parseUsageSummary({
       billingCycleStart: "2026-04-04T00:00:00.000Z",
       billingCycleEnd: "2026-05-04T00:00:00.000Z",
       plan: {
-        autoPercentUsed: 0.12,
-        apiPercentUsed: 0.38,
-        totalPercentUsed: 0.17,
+        autoPercentUsed: 0.29,
+        apiPercentUsed: 0,
+        totalPercentUsed: 0.29,
       },
     });
-    expect(summary.plan.autoPercentUsed).toBeCloseTo(12, 5);
-    expect(summary.plan.apiPercentUsed).toBeCloseTo(38, 5);
-    expect(summary.plan.totalPercentUsed).toBeCloseTo(17, 5);
+    expect(summary.plan.autoPercentUsed).toBeCloseTo(0.29, 5);
+    expect(summary.plan.apiPercentUsed).toBe(0);
+    expect(summary.plan.totalPercentUsed).toBeCloseTo(0.29, 5);
   });
 
   it("falls back to summed auto+api when total is missing", () => {
