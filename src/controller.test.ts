@@ -235,7 +235,7 @@ describe("PaceController — offline / cache fallback", () => {
 
     mockReadToken.mockReturnValue({
       token: FAKE_TOKEN,
-      strategy: "better-sqlite3",
+      strategy: "sqlite3-cli",
     });
     mockFetch.mockResolvedValue({
       ok: false,
@@ -261,7 +261,7 @@ describe("PaceController — offline / cache fallback", () => {
 
     mockReadToken.mockReturnValue({
       token: FAKE_TOKEN,
-      strategy: "better-sqlite3",
+      strategy: "sqlite3-cli",
     });
     mockFetch.mockResolvedValue({
       ok: true,
@@ -285,7 +285,7 @@ describe("PaceController — offline / cache fallback", () => {
 
     mockReadToken.mockReturnValue({
       token: FAKE_TOKEN,
-      strategy: "better-sqlite3",
+      strategy: "sqlite3-cli",
     });
     mockFetch.mockResolvedValue({
       ok: false,
@@ -306,7 +306,7 @@ describe("PaceController — offline / cache fallback", () => {
 
     mockReadToken.mockReturnValue({
       token: FAKE_TOKEN,
-      strategy: "better-sqlite3",
+      strategy: "sqlite3-cli",
     });
     mockFetch.mockResolvedValue({
       ok: false,
@@ -336,12 +336,12 @@ describe("PaceController — checkForAuthChange", () => {
 
   it("triggers a refresh when a new token replaces the previous one", async () => {
     const harness = makeHarness();
-    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "better-sqlite3" });
+    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "sqlite3-cli" });
     mockFetch.mockResolvedValue({ ok: true, summary: SUMMARY });
     await settleInitial(harness);
 
     const fetchCallsBefore = mockFetch.mock.calls.length;
-    mockReadToken.mockReturnValue({ token: TOKEN_B, strategy: "better-sqlite3" });
+    mockReadToken.mockReturnValue({ token: TOKEN_B, strategy: "sqlite3-cli" });
 
     harness.controller.checkForAuthChange();
     await flushPromises();
@@ -353,7 +353,7 @@ describe("PaceController — checkForAuthChange", () => {
 
   it("does not trigger a refresh when the token is unchanged", async () => {
     const harness = makeHarness();
-    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "better-sqlite3" });
+    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "sqlite3-cli" });
     mockFetch.mockResolvedValue({ ok: true, summary: SUMMARY });
     await settleInitial(harness);
 
@@ -369,7 +369,7 @@ describe("PaceController — checkForAuthChange", () => {
 
   it("does not refresh on focus probe when token disappears (sign-out path is interval-only)", async () => {
     const harness = makeHarness();
-    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "better-sqlite3" });
+    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "sqlite3-cli" });
     mockFetch.mockResolvedValue({ ok: true, summary: SUMMARY });
     await settleInitial(harness);
     expect(harness.bar.last?.kind).toBe("data");
@@ -397,7 +397,7 @@ describe("PaceController — checkForAuthChange", () => {
     await settleInitial(harness);
     expect(harness.bar.last?.kind).toBe("signedOut");
 
-    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "better-sqlite3" });
+    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "sqlite3-cli" });
     mockFetch.mockResolvedValue({ ok: true, summary: SUMMARY });
 
     harness.controller.checkForAuthChange();
@@ -410,7 +410,7 @@ describe("PaceController — checkForAuthChange", () => {
 
   it("ignores transient read errors so disk hiccups do not flap the bar", async () => {
     const harness = makeHarness();
-    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "better-sqlite3" });
+    mockReadToken.mockReturnValue({ token: TOKEN_A, strategy: "sqlite3-cli" });
     mockFetch.mockResolvedValue({ ok: true, summary: SUMMARY });
     await settleInitial(harness);
 
@@ -435,7 +435,7 @@ describe("PaceController — tooltip tick", () => {
 
     mockReadToken.mockReturnValue({
       token: FAKE_TOKEN,
-      strategy: "better-sqlite3",
+      strategy: "sqlite3-cli",
     });
     mockFetch.mockResolvedValue({
       ok: true,
@@ -460,7 +460,7 @@ describe("PaceController — tooltip tick", () => {
 
     mockReadToken.mockReturnValue({
       token: FAKE_TOKEN,
-      strategy: "better-sqlite3",
+      strategy: "sqlite3-cli",
     });
     mockFetch.mockResolvedValue({
       ok: false,

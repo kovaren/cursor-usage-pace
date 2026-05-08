@@ -2,12 +2,12 @@ import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   TokenReadError,
   readAccessToken,
   readAccessTokenWithStrategy,
+  resolveSqliteCli,
 } from "./tokenReader";
 
 let tmpDir: string;
@@ -22,26 +22,114 @@ afterEach(() => {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-function createDb(rows: Array<[string, string]> = []): void {
-  const db = new Database(dbPath);
-  db.exec("CREATE TABLE ItemTable (key TEXT PRIMARY KEY, value BLOB);");
-  const insert = db.prepare("INSERT INTO ItemTable (key, value) VALUES (?, ?)");
-  for (const [key, value] of rows) {
-    insert.run(key, value);
+function getTestSqliteCli(): string | undefined {
+  const command = resolveSqliteCli().command;
+  try {
+    execFileSync(command, ["-version"], { stdio: "ignore", timeout: 5000 });
+    return command;
+  } catch {
+    return undefined;
   }
-  db.close();
+}
+
+function createDb(rows: Array<[string, string]> = []): void {
+  const sqliteCli = getTestSqliteCli();
+  if (!sqliteCli) {
+    throw new Error("sqlite3 CLI is required for this test");
+  }
+
+  const statements = ["CREATE TABLE ItemTable (key TEXT PRIMARY KEY, value BLOB);"];
+  for (const [key, value] of rows) {
+    statements.push(
+      `INSERT INTO ItemTable (key, value) VALUES (${sqlString(key)}, ${sqlString(value)});`,
+    );
+  }
+  execFileSync(sqliteCli, [dbPath], {
+    input: statements.join("\n"),
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+    timeout: 5000,
+  });
 }
 
 function hasSqlite3Cli(): boolean {
-  try {
-    execFileSync("sqlite3", ["-version"], { stdio: "ignore", timeout: 5000 });
-    return true;
-  } catch {
-    return false;
-  }
+  return getTestSqliteCli() !== undefined;
 }
 
-describe("readAccessToken (better-sqlite3 path)", () => {
+function sqlString(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+describe("resolveSqliteCli", () => {
+  it("uses CURSOR_USAGE_PACE_SQLITE3 before any bundled binary", () => {
+    const result = resolveSqliteCli({
+      env: { CURSOR_USAGE_PACE_SQLITE3: "/custom/sqlite3" },
+      platform: "win32",
+      arch: "x64",
+      rootDir: "/extension",
+      existsSync: () => true,
+    });
+
+    expect(result).toEqual({ command: "/custom/sqlite3", source: "env" });
+  });
+
+  it.each([
+    ["win32", "x64", "sqlite3.exe"],
+    ["darwin", "arm64", "sqlite3"],
+    ["darwin", "x64", "sqlite3"],
+    ["linux", "x64", "sqlite3"],
+  ] as const)(
+    "uses the bundled binary for %s-%s when present",
+    (platform, arch, executable) => {
+      const rootDir = path.join(tmpDir, "extension");
+      const expected = path.join(
+        rootDir,
+        "vendor",
+        "sqlite",
+        `${platform}-${arch}`,
+        executable,
+      );
+      const result = resolveSqliteCli({
+        env: {},
+        platform,
+        arch,
+        rootDir,
+        existsSync: (p) => p === expected,
+      });
+
+      expect(result).toEqual({ command: expected, source: "bundled" });
+    },
+  );
+
+  it("falls back to sqlite3 from PATH when no bundled binary applies", () => {
+    const result = resolveSqliteCli({
+      env: {},
+      platform: "freebsd",
+      arch: "x64",
+      rootDir: "/extension",
+      existsSync: () => false,
+    });
+
+    expect(result).toEqual({ command: "sqlite3", source: "path" });
+  });
+
+  it("falls back to sqlite3 from PATH when the bundled binary is absent", () => {
+    const result = resolveSqliteCli({
+      env: {},
+      platform: "win32",
+      arch: "x64",
+      rootDir: "/extension",
+      existsSync: () => false,
+    });
+
+    expect(result).toEqual({ command: "sqlite3", source: "path" });
+  });
+});
+
+describe("readAccessToken (sqlite3 CLI path)", () => {
+  const cliAvailable = hasSqlite3Cli();
+  const itIfCli = cliAvailable ? it : it.skip;
+
   it("throws dbMissing when the file does not exist", () => {
     try {
       readAccessToken(path.join(tmpDir, "missing.vscdb"));
@@ -52,7 +140,7 @@ describe("readAccessToken (better-sqlite3 path)", () => {
     }
   });
 
-  it("throws tokenMissing when the row is absent", () => {
+  itIfCli("throws tokenMissing when the row is absent", () => {
     createDb([["someOtherKey", "value"]]);
     try {
       readAccessToken(dbPath);
@@ -62,7 +150,7 @@ describe("readAccessToken (better-sqlite3 path)", () => {
     }
   });
 
-  it("throws tokenEmpty when the value is an empty string", () => {
+  itIfCli("throws tokenEmpty when the value is an empty string", () => {
     createDb([["cursorAuth/accessToken", ""]]);
     try {
       readAccessToken(dbPath);
@@ -72,72 +160,40 @@ describe("readAccessToken (better-sqlite3 path)", () => {
     }
   });
 
-  it("returns the raw token when stored as plain text", () => {
+  itIfCli("returns the raw token when stored as plain text", () => {
     createDb([["cursorAuth/accessToken", "raw.jwt.value"]]);
     expect(readAccessToken(dbPath)).toBe("raw.jwt.value");
   });
 
-  it("unwraps a JSON-encoded string value", () => {
+  itIfCli("unwraps a JSON-encoded string value", () => {
     createDb([["cursorAuth/accessToken", '"quoted.jwt.value"']]);
     expect(readAccessToken(dbPath)).toBe("quoted.jwt.value");
   });
 
-  it("trims surrounding whitespace", () => {
+  itIfCli("trims surrounding whitespace", () => {
     createDb([["cursorAuth/accessToken", "  spaced.jwt.value  "]]);
     expect(readAccessToken(dbPath)).toBe("spaced.jwt.value");
   });
 
-  it("reports better-sqlite3 as the successful strategy when it works", () => {
+  itIfCli("reports sqlite3-cli as the successful strategy when it works", () => {
     createDb([["cursorAuth/accessToken", "raw.jwt.value"]]);
     const result = readAccessTokenWithStrategy(dbPath);
     expect(result.token).toBe("raw.jwt.value");
-    expect(result.strategy).toBe("better-sqlite3");
+    expect(result.strategy).toBe("sqlite3-cli");
   });
 
-  it("logs each strategy attempt via the log callback", () => {
+  itIfCli("logs the CLI attempt via the log callback", () => {
     createDb([["cursorAuth/accessToken", "raw.jwt.value"]]);
     const lines: string[] = [];
     readAccessTokenWithStrategy(dbPath, { log: (m) => lines.push(m) });
-    expect(lines).toContain("Trying better-sqlite3 reader…");
-    expect(lines).toContain("better-sqlite3 reader succeeded");
-  });
-});
-
-describe("readAccessToken (sqlite3 CLI fallback)", () => {
-  const cliAvailable = hasSqlite3Cli();
-  const itIfCli = cliAvailable ? it : it.skip;
-
-  itIfCli("falls back to the CLI when better-sqlite3 cannot open the file", () => {
-    createDb([["cursorAuth/accessToken", "cli.jwt.value"]]);
-    const orig = process.env.CURSOR_USAGE_PACE_BETTER_SQLITE3_DISABLE;
-    // Force the better-sqlite3 path to fail by pointing at a non-existent
-    // module path. We can't easily disable the prebuilt binary at test time,
-    // so instead make the constructor reject the file by passing a path
-    // that's a directory (which better-sqlite3 will refuse to open).
-    const dirPath = path.join(tmpDir, "actually-a-dir.vscdb");
-    fs.mkdirSync(dirPath);
-
-    try {
-      readAccessTokenWithStrategy(dirPath);
-      expect.fail("expected dbUnreadable for both strategies");
-    } catch (err) {
-      expect((err as TokenReadError).kind).toBe("dbUnreadable");
-      expect((err as Error).message).toContain("better-sqlite3");
-      expect((err as Error).message).toContain("sqlite3-cli");
-    } finally {
-      if (orig !== undefined) {
-        process.env.CURSOR_USAGE_PACE_BETTER_SQLITE3_DISABLE = orig;
-      }
-    }
+    expect(lines.some((line) => line.startsWith("Trying sqlite3 CLI"))).toBe(true);
+    expect(lines.some((line) => line.startsWith("sqlite3 CLI succeeded"))).toBe(true);
   });
 
   itIfCli("uses the CLI successfully when given a real DB", () => {
     createDb([["cursorAuth/accessToken", "cli.jwt.value"]]);
-    // Verify the CLI returns the same value the better-sqlite3 path does.
-    // We can't easily make better-sqlite3 fail on a valid file, so this
-    // exercises the CLI directly via its env override.
     const stdout = execFileSync(
-      "sqlite3",
+      getTestSqliteCli() ?? "sqlite3",
       [
         "-readonly",
         "-bail",
@@ -154,7 +210,7 @@ describe("readAccessToken (sqlite3 CLI fallback)", () => {
   itIfCli("CLI path unwraps a CSV-quoted value", () => {
     createDb([["cursorAuth/accessToken", 'value"with"quotes']]);
     const stdout = execFileSync(
-      "sqlite3",
+      getTestSqliteCli() ?? "sqlite3",
       [
         "-readonly",
         "-bail",
@@ -173,7 +229,10 @@ describe("readAccessToken (sqlite3 CLI fallback)", () => {
 });
 
 describe("readAccessToken (aggregate failures)", () => {
-  it("aggregates errors from both strategies into the dbUnreadable message", () => {
+  const cliAvailable = hasSqlite3Cli();
+  const itIfCli = cliAvailable ? it : it.skip;
+
+  itIfCli("aggregates CLI errors into the dbUnreadable message", () => {
     fs.writeFileSync(dbPath, "this is not a sqlite database at all");
     try {
       readAccessTokenWithStrategy(dbPath);
@@ -181,9 +240,6 @@ describe("readAccessToken (aggregate failures)", () => {
     } catch (err) {
       expect((err as TokenReadError).kind).toBe("dbUnreadable");
       const msg = (err as Error).message;
-      expect(msg).toContain("better-sqlite3");
-      // The CLI may or may not be present on a given CI host; if it's not,
-      // we still expect both strategies to be mentioned in the message.
       expect(msg).toContain("sqlite3-cli");
     }
   });

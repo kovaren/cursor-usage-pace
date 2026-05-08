@@ -66,14 +66,14 @@ pace     = actual% - expected%      // negative = under-using, positive = over-u
 
 - `cursor.com/api/usage-summary` is **not a documented public API**. If Cursor changes the schema or the endpoint, this extension will surface a "couldn't refresh" status until it's updated. The parser is deliberately permissive (multiple field-name variants, percentage normalization) but it can't cover every future change.
 - Cursor exposes **no first-party extension API for usage data** as of this writing — the documented `vscode.cursor` namespace covers MCP and plugin registration only. Reading the local SQLite is the same approach used by other community extensions (e.g. `numanaral/cursor-usage-stats`, `Dwtexe/cursor-stats`, `lixwen/cursor-usage-monitor`).
-- The native `better-sqlite3` module ships prebuilt binaries that are compatible with the Electron version Cursor uses. If you ever see "could not open Cursor state database" with a native-module error, run `npm rebuild better-sqlite3` against the Electron version of your editor.
+- The extension reads Cursor's local SQLite database through a bundled `sqlite3` CLI on supported desktop platforms, falling back to a system `sqlite3` when no bundled binary matches the host.
 
 ## Troubleshooting
 
 - **Status bar shows "Cursor: sign in"** — sign in to Cursor and click the bar to refresh.
 - **Status bar shows "Cursor Usage Pace" in warning color** — open *Cursor Usage Pace: Show logs* to see the last error. Common causes: temporary 5xx, network down, schema drift on `usage-summary`.
 - **Numbers look wrong** — compare to [cursor.com/dashboard](https://cursor.com/dashboard). The dashboard is the source of truth; this extension only reframes it.
-- **Logs show "better-sqlite3 failed: …"** — The `better-sqlite3` native module ships prebuilt binaries for Node.js, but Cursor runs Electron, so the prebuilt binary doesn't always match the host ABI. The extension falls back automatically to the system `sqlite3` CLI for that reason, and your status bar should still update via that path. macOS and most Linux distros include `sqlite3` by default; on Windows, [install it](https://www.sqlite.org/download.html) and ensure it's in `PATH`. You can override the binary path via the `CURSOR_USAGE_PACE_SQLITE3` environment variable.
+- **Logs show "sqlite3 CLI failed: …"** — The bundled SQLite tool may be missing, blocked, or unsupported on your CPU/OS. Install SQLite separately and set the `CURSOR_USAGE_PACE_SQLITE3` environment variable to the full path of the `sqlite3` executable.
 
 ## License
 

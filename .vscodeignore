@@ -1,6 +1,10 @@
 .vscode/**
 .vscode-test/**
 src/**
+extension/**
+scripts/**
+test/**
+*.vsix
 .gitignore
 **/tsconfig.json
 **/.eslintrc.json

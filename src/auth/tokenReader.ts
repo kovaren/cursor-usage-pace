@@ -1,8 +1,9 @@
 import * as fs from "fs";
+import * as path from "path";
 import { execFileSync } from "child_process";
 
 const ACCESS_TOKEN_KEY = "cursorAuth/accessToken";
-const SQLITE_CLI = process.env.CURSOR_USAGE_PACE_SQLITE3 ?? "sqlite3";
+const SQLITE_CLI_ENV = "CURSOR_USAGE_PACE_SQLITE3";
 
 export type TokenReadKind =
   | "dbMissing"
@@ -10,7 +11,22 @@ export type TokenReadKind =
   | "tokenMissing"
   | "tokenEmpty";
 
-export type ReadStrategy = "better-sqlite3" | "sqlite3-cli";
+export type ReadStrategy = "sqlite3-cli";
+
+export type SqliteCliSource = "env" | "bundled" | "path";
+
+export interface SqliteCliResolution {
+  command: string;
+  source: SqliteCliSource;
+}
+
+export interface ResolveSqliteCliOptions {
+  env?: NodeJS.ProcessEnv;
+  platform?: NodeJS.Platform;
+  arch?: NodeJS.Architecture;
+  rootDir?: string;
+  existsSync?: (p: string) => boolean;
+}
 
 export interface ReadAccessTokenResult {
   token: string;
@@ -39,13 +55,8 @@ export interface ReadAccessTokenOptions {
 /**
  * Reads `cursorAuth/accessToken` from Cursor's local SQLite database.
  *
- * Tries two strategies in order:
- *   1. `better-sqlite3` (native module). Fast, but its prebuilt binaries
- *      are compiled for Node.js, not for whatever Electron version Cursor
- *      ships — so it sometimes fails to load (or to open the DB) inside
- *      the extension host.
- *   2. The system `sqlite3` CLI. Avoids native modules entirely and
- *      handles WAL/SHM concurrency the same way Cursor does.
+ * Uses the sqlite3 CLI instead of a native Node module so a universal VSIX
+ * does not depend on Electron/Node ABI-specific `.node` binaries.
  *
  * The whole thing is read-only so we never contend with Cursor's writer.
  */
@@ -69,24 +80,12 @@ export function readAccessTokenWithStrategy(
 
   const log = opts.log ?? (() => undefined);
   const errors: { strategy: ReadStrategy; error: Error }[] = [];
+  const sqliteCli = resolveSqliteCli();
 
   try {
-    log("Trying better-sqlite3 reader…");
-    const value = readViaBetterSqlite3(dbPath);
-    log("better-sqlite3 reader succeeded");
-    return { token: finalizeValue(value), strategy: "better-sqlite3" };
-  } catch (err) {
-    if (err instanceof TokenReadError) {
-      throw err;
-    }
-    errors.push({ strategy: "better-sqlite3", error: err as Error });
-    log(`better-sqlite3 failed: ${formatError(err)}`);
-  }
-
-  try {
-    log(`Trying sqlite3 CLI fallback (${SQLITE_CLI})…`);
-    const value = readViaSqliteCli(dbPath);
-    log("sqlite3 CLI fallback succeeded");
+    log(`Trying sqlite3 CLI (${sqliteCli.command})…`);
+    const value = readViaSqliteCli(dbPath, sqliteCli.command);
+    log(`sqlite3 CLI succeeded (${sqliteCli.source})`);
     return { token: finalizeValue(value), strategy: "sqlite3-cli" };
   } catch (err) {
     if (err instanceof TokenReadError) {
@@ -103,52 +102,62 @@ export function readAccessTokenWithStrategy(
   );
 }
 
-function readViaBetterSqlite3(dbPath: string): string {
-  // Imported lazily so a require-time failure surfaces here as a normal
-  // Error rather than killing the whole module. (We see "no NODE_MODULE_VERSION"
-  // style failures inside Electron when the prebuilt binary doesn't match.)
-  let Database: typeof import("better-sqlite3");
-  try {
-    Database = require("better-sqlite3");
-  } catch (err) {
-    throw enrich(err, "could not load better-sqlite3 native module");
+export function resolveSqliteCli(
+  opts: ResolveSqliteCliOptions = {},
+): SqliteCliResolution {
+  const env = opts.env ?? process.env;
+  const override = env[SQLITE_CLI_ENV]?.trim();
+  if (override) {
+    return { command: override, source: "env" };
   }
 
-  let db: import("better-sqlite3").Database;
-  try {
-    db = new Database(dbPath, { readonly: true, fileMustExist: true });
-  } catch (err) {
-    throw enrich(err, "Database constructor rejected the file");
+  const platform = opts.platform ?? process.platform;
+  const arch = opts.arch ?? process.arch;
+  const rootDir = opts.rootDir ?? path.resolve(__dirname, "..", "..");
+  const existsSync = opts.existsSync ?? fs.existsSync;
+  const bundled = getBundledSqliteCliPath(rootDir, platform, arch);
+  if (bundled && existsSync(bundled)) {
+    return { command: bundled, source: "bundled" };
   }
 
-  try {
-    const row = db
-      .prepare("SELECT value FROM ItemTable WHERE key = ?")
-      .get(ACCESS_TOKEN_KEY) as { value?: string } | undefined;
-    if (!row || row.value === undefined || row.value === null) {
-      throw new TokenReadError(
-        "Cursor access token not found. Sign in to Cursor and try again.",
-        "tokenMissing",
-      );
-    }
-    return row.value;
-  } finally {
-    try {
-      db.close();
-    } catch {
-      // ignore close errors
-    }
+  return { command: "sqlite3", source: "path" };
+}
+
+function getBundledSqliteCliPath(
+  rootDir: string,
+  platform: NodeJS.Platform,
+  arch: NodeJS.Architecture,
+): string | undefined {
+  const target = getBundledSqliteTarget(platform, arch);
+  if (!target) return undefined;
+
+  const executable = platform === "win32" ? "sqlite3.exe" : "sqlite3";
+  return path.join(rootDir, "vendor", "sqlite", target, executable);
+}
+
+function getBundledSqliteTarget(
+  platform: NodeJS.Platform,
+  arch: NodeJS.Architecture,
+): string | undefined {
+  switch (`${platform}-${arch}`) {
+    case "win32-x64":
+    case "darwin-arm64":
+    case "darwin-x64":
+    case "linux-x64":
+      return `${platform}-${arch}`;
+    default:
+      return undefined;
   }
 }
 
-function readViaSqliteCli(dbPath: string): string {
+function readViaSqliteCli(dbPath: string, sqliteCli: string): string {
   // We pass the DB path and the SQL as separate argv entries so there's no
   // shell metacharacter risk. The query selects nothing else, so the only
   // thing that can come back is either an empty string or the value column.
   let stdout: string;
   try {
     stdout = execFileSync(
-      SQLITE_CLI,
+      sqliteCli,
       [
         "-readonly",
         "-bail",
@@ -169,7 +178,7 @@ function readViaSqliteCli(dbPath: string): string {
     if (e.code === "ENOENT") {
       throw enrich(
         err,
-        `\`${SQLITE_CLI}\` not found in PATH (set CURSOR_USAGE_PACE_SQLITE3 to override)`,
+        `\`${sqliteCli}\` not found (set ${SQLITE_CLI_ENV} to override)`,
       );
     }
     throw enrich(err, "sqlite3 CLI exited with an error");
