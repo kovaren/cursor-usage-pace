@@ -1,14 +1,17 @@
 # Cursor Usage Pace
 
-Cursor extension that shows in the status bar whether you are ahead or behind on your monthly Cursor quota, given how far through the billing cycle you are.
+This extension shows whether you are ahead or behind on your Cursor quota compared to a linear burn rate.
+
+[![Tooltip preview](images/tooltip.png)](images/tooltip.png)
 
 Cursor's own dashboard shows you *what* you have used (e.g. "Auto + Composer 12%, API 38%"). It does not tell you whether that is a lot or a little for the date. This extension does that math for you.
 
-## Status bar
+## Features
 
+### Status bar
 The status bar shows usage pace for **Auto** (Auto + Composer) and **API** models. Each figure compares quota use so far with what you'd expect at this date if that quota were depleted evenly across the billing window.
 
-[![Detailed tooltip: cycle, Auto + Composer and API pace bars, refresh actions](images/statusbar.png)](images/statusbar.png)
+[![Status bar preview](images/statusbar.png)](images/statusbar.png)
 
 **`↑N%`** means you have burned **N** percent **more** tokens compared to a linear burn. At this rate you'll spend all tokens before the end of the billing month.
 
@@ -21,14 +24,8 @@ The status bar shows usage pace for **Auto** (Auto + Composer) and **API** model
 | `Auto ↓2% • API ↓1%`   | Comfortably below expected burn rate        |
 | `Auto ↓57% • API ↓32%` | Heavily under-using, a lot of headroom left |
 
-
-## Detailed view
-
-Hover the status bar item for a full breakdown:
-
-[![Detailed tooltip: cycle, Auto + Composer and API pace bars, refresh actions](images/tooltip.png)](images/tooltip.png)
-
-Clicking the bar or "Refresh" in the tooltip triggers a manual refresh.
+### Detailed view
+Hover the status bar item for a full breakdown in a tooltip. Clicking the bar or "Refresh" in the tooltip triggers a manual refresh.
 
 ## Pace math
 
@@ -39,7 +36,6 @@ pace     = actual% - expected%      // negative = under-using, positive = over-u
 ```
 
 ## Settings
-
 
 | Setting                                  | Default    | What it does                                                       |
 | ---------------------------------------- | ---------- | ------------------------------------------------------------------ |

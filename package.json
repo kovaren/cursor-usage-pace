@@ -1,8 +1,8 @@
 {
   "name": "cursor-usage-pace",
   "displayName": "Cursor Usage Pace",
-  "description": "Status bar indicator showing whether you're ahead or behind on Cursor Auto+Composer and API quotas, given how far through the billing cycle you are.",
-  "version": "0.4.0",
+  "description": "Shows whether you are ahead or behind on your Cursor quota compared to a linear burn rate.",
+  "version": "0.4.1",
   "publisher": "ivan-kovarin",
   "license": "MIT",
   "repository": {
